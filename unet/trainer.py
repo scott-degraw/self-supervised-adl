@@ -113,6 +113,6 @@ class Trainer:
             
             running_loss += loss.item()
             steps += 1
-            self.model.train()
+        self.model.train()
         
         return running_loss / steps
