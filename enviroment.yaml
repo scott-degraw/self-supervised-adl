@@ -1,0 +1,14 @@
+name: adl 
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+dependencies:
+  - python
+  - pytorch
+  - pytorch-cuda=12.1
+  - torchvision
+  - mkl
+  - pip
+  - pip:
+    - diffusers
