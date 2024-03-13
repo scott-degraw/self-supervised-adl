@@ -22,15 +22,17 @@ class OxfordPetsDataset(Dataset):
     Image: RGB images
     Trimap: 1:Foreground, 2:Background, 3:Not Classified
     """
-    def __init__(self, root, train=False, test=False, image_size=(240,240)):
+    def __init__(self, root, train=False, val=False, test=False, image_size=(240,240)):
         if(train):
-            label_filename = "trainval.txt"
+            label_filename = "train.txt"
+        elif(val):
+            label_filename = "val.txt"
         elif(test):
             label_filename = "test.txt"
         else:
             raise Exception("Select train or test set")
             
-        with open(os.path.join(root,'annotations',label_filename), 'rt') as f:
+        with open(os.path.join(root,'annotations','splits',label_filename), 'rt') as f:
             labels = f.readlines() # reads labels formatted as <Image CLASS-ID SPECIES BREED-ID>
         labels = [l.split(' ')[0] for l in labels]
         
