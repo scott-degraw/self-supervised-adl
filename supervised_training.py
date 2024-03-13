@@ -42,7 +42,7 @@ if __name__ == "__main__":
         optim=torch.optim.Adam(model.parameters(), lr=learning_rate),
         criterion=torch.nn.CrossEntropyLoss(),
         device=device,
-        checkpoint_name="unet_20240312T160038.pt",
+        # checkpoint_name="unet_20240312T160038.pt",
     )
     
     # Train the model
