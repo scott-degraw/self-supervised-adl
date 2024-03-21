@@ -15,14 +15,14 @@ if __name__ == "__main__":
     testset = OxfordPetsDataset(data_dir, split="test", image_size=(240, 240))
 
     model = UNet()
-    model_path = os.path.join(runs_dir, "unet_20240312T162901.pt")
+    model_path = os.path.join(runs_dir, "unet_20240321T215109.pt")
     model.load_state_dict(torch.load(model_path))
     model.eval()
     print("Successfully loaded model.")
 
     index = 10
-    testset.show_image(index)
-    testset.show_trimap(index)
+    testset.get_image(index).show()
+    testset.get_trimap(index).show()
 
     input = testset.__getitem__(index)[0].unsqueeze(0)
     label = testset.__getitem__(index)[1]

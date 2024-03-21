@@ -13,7 +13,6 @@ if __name__ == "__main__":
     data_dir = os.path.join(os.getcwd(), "data")
     if not os.path.exists(runs_dir):
         os.makedirs(runs_dir)
-    assert os.path.exists(data_dir)
 
     device = torch.device(
         "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"

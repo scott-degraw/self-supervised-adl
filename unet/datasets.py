@@ -90,7 +90,7 @@ def trimap2image(trimap: torch.Tensor):
     trimap[trimap == original_border] = border
     trimap[trimap == original_pet] = pet
 
-    return F.to_pil_image(trimap)
+    return F.to_pil_image(trimap.type(torch.uint8))
 
 
 class OxfordPetsDataset(Dataset):
@@ -121,6 +121,7 @@ class OxfordPetsDataset(Dataset):
         trimap_transform = transforms.Compose(
             [
                 transforms.PILToTensor(),
+                transforms.Lambda(lambda x: x.type(torch.long)),
                 transforms.Resize(size=image_size, antialias=True),
             ]
         )
@@ -140,7 +141,7 @@ class OxfordPetsDataset(Dataset):
         )
 
     def __len__(self):
-        return len(self.datset)
+        return len(self.dataset)
 
     def __getitem__(self, index):
         return self.dataset[index]
