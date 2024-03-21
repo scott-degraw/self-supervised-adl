@@ -186,3 +186,23 @@ def get_splits(ds:Dataset, batch_size:int=64, split:float=.8) -> tuple[Dataset, 
     return (train_dl, val_dl, test_dl)
 
 
+'''
+Training/Testing 
+'''
+def iou_loss(y_pred:torch.tensor, y_true:torch.tensor) -> torch.tensor:
+    '''
+    Compute Intersection over Union (IoU) loss between predicted and target masks.
+    
+    Parameters:
+        y_pred (torch.tensor): Predicted masks with shape (batch_size, channels, height, width)
+        y_true (torch.tensor): Target masks with shape (batch_size, channels, height, width)
+        
+    Returns:
+        torch.tensor: IOU loss (should be single value)
+    ''' 
+    intersection = torch.sum(y_pred * y_true, dim=(1, 2, 3))
+    union = torch.sum(y_pred + y_true, dim=(1, 2, 3)) - intersection
+    
+    iou = (intersection + 1e-6) / (union + 1e-6)  # Adding epsilon to avoid division by zero
+    
+    return 1 - torch.mean(iou)
