@@ -12,17 +12,9 @@ import os
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader, Subset
+from torchvision.utils import save_image
 from torchvision import transforms
 from PIL import Image
-
-'''
-Device and Data Type
--> if cuda is available, use it
--> if not, use cpu
--> if mac, use mps (metal shaders)
-'''
-DEVICE = torch.device('cuda' if torch.cuda.is_available() else ('mps' if torch.backends.mps.is_available() else 'cpu'))
-DTYPE = torch.float32
 
 
 '''
@@ -127,12 +119,12 @@ class SynthDataset(Dataset):
             transforms.ToTensor(),
             transforms.Resize(size=img_size, antialias=True),
             CheckerboardTransform(square_size=16),
-            transforms.Normalize((0.5, 0.5, 0.5),(0.5, 0.5, 0.5)),
+            #transforms.Normalize((0.5, 0.5, 0.5),(0.5, 0.5, 0.5)),
         ]) 
         self.y_transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Resize(size=img_size, antialias=True),
-            transforms.Normalize((0.5, 0.5, 0.5),(0.5, 0.5, 0.5)),
+            #transforms.Normalize((0.5, 0.5, 0.5),(0.5, 0.5, 0.5)),
             #RGBToBWTransform(),
         ]) 
 
@@ -179,9 +171,9 @@ def get_splits(ds:Dataset, batch_size:int=64, split:float=.8) -> tuple[Dataset, 
     test_ds = Subset(ds, test_split)
 
     # Dataloaders
-    train_dl = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
-    val_dl = DataLoader(val_ds, batch_size=batch_size, shuffle=True)
-    test_dl = DataLoader(test_ds, batch_size=batch_size, shuffle=True)
+    train_dl = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
+    val_dl = DataLoader(val_ds, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
+    test_dl = DataLoader(test_ds, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
 
     return (train_dl, val_dl, test_dl)
 
@@ -206,3 +198,22 @@ def iou_loss(y_pred:torch.tensor, y_true:torch.tensor) -> torch.tensor:
     iou = (intersection + 1e-6) / (union + 1e-6)  # Adding epsilon to avoid division by zero
     
     return 1 - torch.mean(iou)
+
+
+def save_image_output(network:nn.Module, dl:DataLoader, fname:str, device:torch.device):
+    '''
+    Pull an image from the dataloader and save the network's prediction
+    '''
+
+    network.eval()
+    with torch.no_grad():
+        for (inputs, targets) in dl:
+            inputs = inputs.to(device)
+            targets = targets.to(device)
+
+            # Forward pass
+            outputs = network(inputs)
+
+            # Save the first image
+            save_image(torch.cat((inputs, outputs), dim=2), fname)
+            break
