@@ -2,6 +2,7 @@ from datetime import datetime
 import torch
 import torch.nn as nn
 from torch.optim import Adam 
+from os.path import join
 
 from utils import * 
 from model import UNet
@@ -33,7 +34,7 @@ def epoch_step(train_dl:torch.utils.data.DataLoader, model:nn.Module, criterion:
     model.train()
     for (inputs, targets) in train_dl:
         inputs = inputs.to(DEVICE, dtype=DTYPE)
-        targets = targets.to(DEVICE, dtype=DTYPE)
+        targets = targets.to(DEVICE, dtype=torch.long)
         targets = targets.squeeze(1) - 1
 
         # Forward pass
@@ -64,7 +65,7 @@ def test_step(test_dl:torch.utils.data.DataLoader, model:nn.Module, criterion:nn
     with torch.no_grad():
         for (inputs, targets) in test_dl:
             inputs = inputs.to(DEVICE, dtype=DTYPE)
-            targets = targets.to(DEVICE, dtype=DTYPE)
+            targets = targets.to(DEVICE, dtype=torch.long)
             targets = targets.squeeze(1) - 1
 
             # Forward pass
@@ -76,15 +77,17 @@ def test_step(test_dl:torch.utils.data.DataLoader, model:nn.Module, criterion:nn
 
 
 if __name__ == '__main__':
-    folder = '../../adl_data/oxford'
+    data_dir = '/home/squirt/Documents/data'
+    folder = join(data_dir, 'adl_data/oxford')
 
     # Load the dataset
     all_ds = OxfordPetsDataset(folder)
-    train_dl, val_dl, test_dl = get_splits(all_ds, batch_size=24, split=.8)
+    train_dl, val_dl, test_dl = get_splits(all_ds, batch_size=16, split=.7)
 
-    print(f'Lenght of train_dl: {len(train_dl)}')
     # Model
-    network = UNet().to(DEVICE, dtype=DTYPE) 
+    network = UNet()
+    network.load_state_dict(torch.load('unet_pets.pth'))
+    network = network.to(DEVICE, dtype=DTYPE)
 
     # Loss
     loss = nn.CrossEntropyLoss()
@@ -94,7 +97,7 @@ if __name__ == '__main__':
     optim = Adam(network.parameters(), lr=lr)
 
     # Training Loop
-    num_epochs = 10
+    num_epochs = 5 
     for e in range(num_epochs):
         # Train
         epoch_loss = epoch_step(train_dl, network, loss, optim)
@@ -103,12 +106,14 @@ if __name__ == '__main__':
         t_loss = test_step(val_dl, network, loss)
         print(f'Epoch {e+1} Val Loss: {t_loss}')
 
-    # Save the model
-    torch.save(network.state_dict(), 'unet_pets.pth')
-
     # Test model
     t_loss = test_step(test_dl, network, loss)
     print(f'Epoch {e+1} Test Loss: {t_loss}')
 
     # Test output
-    save_image_output(network, test_dl, 'test_output.png', DEVICE)
+    save_image_output(network, test_dl, 'oxford_output.png', DEVICE)
+
+    # Save the model
+    network = network.to(torch.device('cpu'), torch.float64)
+    torch.save(network.state_dict(), 'unet_oxford.pth')
+

@@ -94,7 +94,7 @@ if __name__ == '__main__':
     optim = Adam(network.parameters(), lr=lr)
 
     # Training Loop
-    num_epochs = 20
+    num_epochs = 10
     for e in range(num_epochs):
         # Train
         epoch_loss = epoch_step(train_dl, network, loss, optim)
@@ -103,17 +103,15 @@ if __name__ == '__main__':
         t_loss = test_step(val_dl, network, loss)
         print(f'Epoch {e+1} Val Loss: {t_loss}')
 
-    # Save the model
-    torch.save(network.state_dict(), 'unet_pets.pth')
-
-    # Load the model
-    #network.load_state_dict(torch.load('unet_pets.pth'))
-
     # Test model
     t_loss = test_step(test_dl, network, loss)
     print(f'Epoch {e+1} Test Loss: {t_loss}')
 
     # Test output
-    save_image_output(network, test_dl, 'test_output.png', DEVICE)
+    save_image_output(network, test_dl, 'pretrain_output.png', DEVICE)
+
+    # Save the model
+    network = network.to(torch.device('cpu'), torch.float64)
+    torch.save(network.state_dict(), 'unet_pets.pth')
 
     print('Done')

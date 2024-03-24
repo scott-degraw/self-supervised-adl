@@ -2,6 +2,7 @@
 import torch
 import torch.nn as nn
 from torch.optim import Adam 
+from os.path import join
 
 from utils import * 
 from model import UNet
@@ -73,22 +74,13 @@ def test_step(test_dl:torch.utils.data.DataLoader, model:nn.Module, criterion:nn
 
 
 if __name__ == '__main__':
-    folder = '../../adl_data/synthetic_data'
+    data_dir = '/home/squirt/Documents/data'
+    folder = join(data_dir, 'adl_data/synthetic_data')
 
     # Load the dataset
     all_ds = SynthDataset(folder)
     train_dl, val_dl, test_dl = get_splits(all_ds, batch_size=16, split=.8)
 
-    print(f'Lenght of train_dl: {len(train_dl)}')
-
-    '''
-    # Quick test
-    for (inputs, targets) in train_dl:
-        inputs = inputs.to(DEVICE, dtype=DTYPE)
-        targets = targets.to(DEVICE, dtype=DTYPE)
-        print(inputs.shape, targets.shape)
-        break
-    '''
     # Model
     network = UNet().to(DEVICE, dtype=DTYPE) 
 
@@ -109,14 +101,15 @@ if __name__ == '__main__':
         t_loss = test_step(val_dl, network, loss)
         print(f'Epoch {e+1} Val Loss: {t_loss}')
 
-    # Save the model
-    torch.save(network.state_dict(), 'unet_pets.pth')
-
     # Test model
     t_loss = test_step(test_dl, network, loss)
     print(f'Epoch {e+1} Test Loss: {t_loss}')
 
     # Test output
-    save_image_output(network, test_dl, 'test_output.png', DEVICE)
+    save_image_output(network, test_dl, 'pretrain_output.png', DEVICE)
+
+    # Save the model
+    network = network.to(torch.device('cpu'), torch.float64)
+    torch.save(network.state_dict(), 'unet_pets.pth')
 
     print('Done')

@@ -83,10 +83,11 @@ if __name__ == '__main__':
 
     # Load the dataset
     all_ds = OxfordPetsDataset(folder)
-    train_dl, val_dl, test_dl = get_splits(all_ds, batch_size=32, split=.5)
+    train_dl, val_dl, test_dl = get_splits(all_ds, batch_size=32, split=.7)
 
-    network = UNet().to(DEVICE) 
+    network = UNet()
     network.load_state_dict(torch.load('unet_pets.pth'))
+    network = network.to(DEVICE, torch.float32)
 
     # Loss
     loss = nn.CrossEntropyLoss()
@@ -96,7 +97,7 @@ if __name__ == '__main__':
     optim = Adam(network.parameters(), lr=lr)
 
     # Training Loop
-    num_epochs = 3 
+    num_epochs = 5 
     for e in range(num_epochs):
         # Train
         epoch_loss = epoch_step(train_dl, network, loss, optim)
@@ -105,14 +106,15 @@ if __name__ == '__main__':
         t_loss = test_step(val_dl, network, loss)
         print(f'Epoch {e+1} Val Loss: {t_loss}')
 
-    # Save the model
-    torch.save(network.state_dict(), 'unet_oxford.pth')
-
     # Test model
     t_loss = test_step(test_dl, network, loss)
     print(f'Epoch {e+1} Test Loss: {t_loss}')
 
     # Test output
-    save_image_output(network, test_dl, 'test_output.png', DEVICE)
+    save_image_output(network, test_dl, 'oxford_output.png', DEVICE)
+
+    # Save the model
+    network = network.to(torch.device('cpu'), torch.float64)
+    torch.save(network.state_dict(), 'unet_oxford.pth')
 
     print('Done')
