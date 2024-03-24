@@ -6,6 +6,14 @@ from torch.optim import Adam
 from utils import * 
 from model import UNet
 
+'''
+Device and Data Type
+-> if cuda is available, use it
+-> if not, use cpu
+-> if mac, use mps (metal shaders)
+'''
+DEVICE = torch.device('cuda' if torch.cuda.is_available() else ('mps' if torch.backends.mps.is_available() else 'cpu'))
+DTYPE = torch.float32
 
 '''
 Training/Testing Loops
@@ -108,5 +116,7 @@ if __name__ == '__main__':
     t_loss = test_step(test_dl, network, loss)
     print(f'Epoch {e+1} Test Loss: {t_loss}')
 
+    # Test output
+    save_image_output(network, test_dl, 'test_output.png', DEVICE)
 
     print('Done')

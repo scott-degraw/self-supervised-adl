@@ -6,7 +6,7 @@ from torch.cuda.amp import GradScaler, autocast
 from os.path import join
 
 from utils import * 
-from unet_model import UNet
+from model import UNet
 
 # Throw error if cuda not available (sorry mac people)
 assert torch.cuda.is_available(), "CUDA not available"
