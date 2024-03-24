@@ -8,7 +8,6 @@ Extends torch Dataset class to interface with the following datasets:
 """
 
 import os
-#import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader, Subset
@@ -72,15 +71,14 @@ class OxfordPetsDataset(Dataset):
         self.image_transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Resize(size=image_size, antialias=True),
-            transforms.Normalize((0.5, 0.5, 0.5),(0.5, 0.5, 0.5)),
-            # transforms.Normalize((0.485, 0.456, 0.406),(0.229, 0.224, 0.225)), # ImageNet mean & std
+            #transforms.Normalize((0.5, 0.5, 0.5),(0.5, 0.5, 0.5)),
         ])
         self.trimap_transform = transforms.Compose([
             transforms.PILToTensor(),
             transforms.Resize(size=image_size, antialias=True),
+            transforms.Lambda(lambda x: x.long()),
         ])
         
-        #print(f"Loaded {len(self.file_path_images)} Images and Trimaps")
         return
         
     def __len__(self):
@@ -101,7 +99,6 @@ class OxfordPetsDataset(Dataset):
         trimap = Image.open(trimap_path)
         
         return self.image_transform(image), self.trimap_transform(trimap)
-        # return {'image': self.image_transform(image), 'trimap': self.trimap_transform(trimap)}
 
 
 class SynthDataset(Dataset):
@@ -155,8 +152,6 @@ def get_splits(ds:Dataset, batch_size:int=64, split:float=.8) -> tuple[Dataset, 
         - test_dl: test 
     '''
     # Random shuffle the indices
-    #indices = np.arange(len(ds))
-    #np.random.shuffle(indices)
     indices = torch.randperm(len(ds))
 
     # Split the indices
