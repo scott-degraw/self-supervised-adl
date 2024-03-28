@@ -8,11 +8,21 @@ Extends torch Dataset class to interface with the following datasets:
 """
 
 import os
+import requests
+import zipfile
+from glob import glob
+from typing import Literal
+from typing import Tuple
+
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader, Subset
-from torchvision.utils import save_image
 from torchvision import transforms
+from torchvision.io import read_image
+from torchvision.utils import save_image
+from torchvision.datasets import OxfordIIITPet
+from torchvision.transforms import functional as F
+
 from PIL import Image
 
 
@@ -166,6 +176,26 @@ def trimap2pil(trimap: torch.Tensor) -> Image:
 
     return F.to_pil_image(trimap.type(torch.uint8))
 
+def images_mean_and_std(fnames: list[str]) -> Tuple[torch.Tensor, torch.Tensor]:
+    channel_sums = torch.zeros((3, ))
+    square_channel_sums = torch.zeros((3, ))
+
+    num_pixels = 0
+
+    for image_number, fname in enumerate(fnames):
+        print(f"{image_number / len(fnames) * 100:4.1f} done \r")
+        image = read_image(fname)
+        image = F.convert_image_dtype(image)
+        num_pixels += image.numel() / image.shape[0] # Don't count the subpixels
+        summed_image = image.sum((1, 2))
+        channel_sums += summed_image       
+        squared_summed_image = image.pow(2).sum((1, 2))
+        square_channel_sums += squared_summed_image
+    
+    means = channel_sums / num_pixels
+    std = torch.sqrt(square_channel_sums / num_pixels - means.pow(2))
+
+    return means, std
 
 class OxfordPetsDataset(Dataset):
     """
@@ -213,6 +243,10 @@ class OxfordPetsDataset(Dataset):
                 transforms.Resize(size=image_size, antialias=True),
             ]
         )
+
+        super().__init__()
+
+        self.image_size = image_size
 
         if split == "train":
             dataset_split = "trainval"
@@ -282,7 +316,7 @@ class KaggleDogsAndCats(Dataset):
 
     Datset consists of just images.
     """
-    _dataset_name = "kaggle_dogs_vs_cats"
+    _dataset_name = "Kaggle dogs and cats"
     _url = "https://liveuclac-my.sharepoint.com/:u:/g/personal/ucabstd_ucl_ac_uk/EXBk_s4yNOxPusy3f85vaHwBFYpd4uzW0dnHSTKjjt1j3A?e=uicsaz&download=1"
     _train_dir = "train"
     _test_dir = "test1"
@@ -306,6 +340,10 @@ class KaggleDogsAndCats(Dataset):
                 transforms.Normalize((-0.5, -0.5, -0.5), (1.0, 1.0, 1.0)),
             ]
         )
+
+        super().__init__()
+
+        self.image_size = image_size
 
         download_dataset(self._url, root, self._dataset_name)
 
@@ -359,46 +397,79 @@ class KaggleDogsAndCats(Dataset):
         return image
 
 class SynthDataset(Dataset):
-    def __init__(self, root: str, img_size: tuple[int] = (240, 240)):
-        super(SynthDataset, self).__init__()
+    _dataset_name = "stable_diffusion_images"
+    _url = "https://liveuclac-my.sharepoint.com/:u:/g/personal/ucabstd_ucl_ac_uk/EZU5VGweR2JAv0i4Vfr-uvIBw8QkPT_7TTVQXQ4wlAs54w?e=kBDsnU&download=1"
+    _train_dir = "stable_diffusion_images"
+
+    def __init__(self, root: str, image_size: tuple[int] = (240, 240)):
         """
         Synthetic dataset
         Args:
             - root (str): root directory of the dataset
             - img_size (tuple[int]): image size to reshape to 
         """
-        self.image_list = [os.path.join(root, f) for f in os.listdir(root) if f.endswith(".png")]
 
-        self.x_transform = transforms.Compose(
+        super().__init__()
+        self.image_size = image_size
+        self._image_dir = os.path.join(root, self._dataset_name, self._train_dir)
+
+        download_dataset(self._url, root, self._dataset_name)
+        self.image_fnames = glob("*.png", root_dir=self._image_dir)
+
+        self.image_transform = transforms.Compose(
             [
-                transforms.ToTensor(),
-                transforms.Resize(size=img_size, antialias=True),
-                CheckerboardTransform(square_size=16),
-                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                transforms.ConvertImageDtype(torch.float32),
+                transforms.Resize(size=image_size, antialias=True),
+                transforms.Normalize((0.5498123168945312, 0.4941849112510681, 0.4348284602165222), 
+                                     (0.278773695230484, 0.26160579919815063, 0.27657902240753174)
+                                     ),
             ]
         )
-        self.y_transform = transforms.Compose(
+        self.image_unnormalize = transforms.Compose(
             [
-                transforms.ToTensor(),
-                transforms.Resize(size=img_size, antialias=True),
-                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-                # RGBToBWTransform(),
+                transforms.Normalize((0, 0, 0), 
+                                     (1 / 0.278773695230484, 1 / 0.26160579919815063, 1 / 0.27657902240753174)),
+                transforms.Normalize((-0.5498123168945312, -0.4941849112510681, -0.4348284602165222),
+                                     (1.0, 1.0, 1.0)),
             ]
         )
+
 
     def __len__(self):
-        return len(self.image_list)
+        return len(self.image_fnames)
 
     def __getitem__(self, index: int) -> tuple[torch.tensor, torch.tensor]:
         """
         Get image and its corresponding BW image
         """
+        image_fname = self.image_fnames[index]
+        image = read_image(os.path.join(self._image_dir, image_fname))
 
-        image = Image.open(self.image_list[index]).convert("RGB")
-        x_img = self.x_transform(image)
-        y_img = self.y_transform(image)
-        return x_img, y_img
+        if self.image_transform is not None:
+            image = self.image_transform(image)
+        
+        return image
 
+class PretrainingDataset(Dataset):
+    """
+    Dataset to give image and mask for training
+    """
+
+    def __init__(self, dataset: Dataset, mask_generator: nn.Module):
+        super().__init__()
+        self.dataset = dataset
+        self.image_transforms = dataset.image_transform
+        self.image_unnormalize = dataset.image_unnormalize
+
+        self.mask = mask_generator
+    
+    def __len__(self) -> int:
+        return len(self.dataset)
+    
+    def __getitem__(self, index) -> Tuple[torch.Tensor, torch.Tensor]:
+        return self.dataset[index], self.mask()
+
+        
 
 def get_splits(ds:Dataset, batch_size:int=64, split:float=.8) -> tuple[Dataset, Dataset, Dataset]:
     '''
@@ -463,13 +534,17 @@ def save_image_output(network:nn.Module, dl:DataLoader, fname:str, device:torch.
 
     network.eval()
     with torch.no_grad():
-        for (inputs, targets) in dl:
-            inputs = inputs.to(device)
-            targets = targets.to(device)
+        for images, masks in dl:
+            images = images.to(device)
+            masks = masks.to(device)
+
+            masked_images = masks * images
 
             # Forward pass
-            outputs = network(inputs)
+            outputs = network(masked_images)
 
+            masked_images = dl.dataset.dataset.dataset.image_unnormalize(masked_images)
+            outputs = dl.dataset.dataset.dataset.image_unnormalize(outputs)
             # Save the first image
-            save_image(torch.cat((inputs, outputs), dim=2), fname)
+            save_image(torch.cat((masked_images, outputs), dim=2), fname)
             break
