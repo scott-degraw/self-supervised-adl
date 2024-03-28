@@ -39,14 +39,14 @@ def epoch_step(train_dl:torch.utils.data.DataLoader, model:nn.Module, criterion:
         # Forward pass
         outputs = model(inputs)
         loss = criterion(outputs, targets)
-        total_loss += loss.item()
+        total_loss += inputs.shape[0] * loss.item()
 
         # Backward pass and Optimize
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
-    return total_loss
+    return total_loss / len(train_dl.dataset)
 
 
 def test_step(test_dl:torch.utils.data.DataLoader, model:nn.Module, criterion:nn.Module) -> float:
@@ -69,8 +69,8 @@ def test_step(test_dl:torch.utils.data.DataLoader, model:nn.Module, criterion:nn
             # Forward pass
             outputs = model(inputs)
             loss = criterion(outputs, targets)
-            total_loss += loss.item()
-    return total_loss
+            total_loss += inputs.shape[0] * loss.item()
+    return total_loss / len(test_dl.dataset)
 
 
 if __name__ == '__main__':
