@@ -508,23 +508,44 @@ def get_splits(ds:Dataset, batch_size:int=64, split:float=.8) -> tuple[Dataset, 
 '''
 Training/Testing 
 '''
-def iou_loss(y_pred:torch.tensor, y_true:torch.tensor) -> torch.tensor:
+def iou_score(y_pred:torch.Tensor, y_true:torch.Tensor) -> torch.Tensor:
     '''
-    Compute Intersection over Union (IoU) loss between predicted and target masks.
+    Compute Intersection over Union (IOU) score between predicted and target masks for multiple classes.
     
     Parameters:
         y_pred (torch.tensor): Predicted masks with shape (batch_size, channels, height, width)
         y_true (torch.tensor): Target masks with shape (batch_size, channels, height, width)
         
     Returns:
-        torch.tensor: IOU loss (should be single value)
+        torch.tensor: IOU score (should be single value)
     ''' 
-    intersection = torch.sum(y_pred * y_true, dim=(1, 2, 3))
-    union = torch.sum(y_pred + y_true, dim=(1, 2, 3)) - intersection
+
+    # Flatten the class predictions
+    y_pred = y_pred.ravel()
+    y_true = y_true.ravel()
+
+    segmentation_classes, class_counts = torch.unique(y_pred, return_counts=True)
+    iou_class_scores = torch.zeros_like(segmentation_classes)
+
+    for class_index, cl in enumerate(segmentation_classes):
+        positives = y_pred == cl
+        negatives = ~positives
+
+        correct_identification = y_true == cl
+
+        true_positives = torch.count_nonzero(positives.logical_and(correct_identification))
+        false_positives = torch.count_nonzero(positives.logical_and(~correct_identification))
+        false_negatives = torch.count_nonzero(negatives.logical_and(correct_identification))
+
+        iou = true_positives / (true_positives + false_positives + false_negatives)
+        iou_class_scores[class_index] = iou
     
-    iou = (intersection + 1e-6) / (union + 1e-6)  # Adding epsilon to avoid division by zero
+    class_proportions = class_counts / class_counts.sum()
+
+    # Weighted multi class IOU 
+    mIOU = torch.sum(iou_class_scores * class_proportions)
     
-    return 1 - torch.mean(iou)
+    return mIOU
 
 
 def save_image_output(network:nn.Module, dl:DataLoader, fname:str, device:torch.device):
