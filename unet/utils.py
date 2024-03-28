@@ -19,23 +19,51 @@ from PIL import Image
 '''
 Transforms
 '''
-class CheckerboardTransform:
-    def __init__(self, square_size:int=10):
+class CheckerboardTransform(nn.Module):
+    def __init__(self, square_size:int=10, image_size: Tuple[int, int] = (240, 240)):
         '''
         Make Checkerboard pattern on the image
         Args:
             - square_size (int): size of the squares, default 10
         '''
+        super().__init__()
         self.square_size = square_size
+        self.image_size = image_size
 
-    def __call__(self, tensor:torch.tensor) -> torch.tensor:
-        h, w = tensor.size(1), tensor.size(2)
+        self.mask = torch.ones(image_size)
+        self.mask.unsqueeze_(0)
+
+        h, w = self.mask.size(1), self.mask.size(2)
         for i in range(0, h, self.square_size):
             for j in range(0, w, self.square_size):
                 if (i // self.square_size + j // self.square_size) % 2 == 0:
-                    tensor[:, i:i+self.square_size, j:j+self.square_size] = 0
-        return tensor
+                    self.mask[:, i:i+self.square_size, j:j+self.square_size] = 0
 
+    def __call__(self, image: torch.tensor) -> torch.tensor:
+        return self.mask * image
+
+class CheckerboardMask(nn.Module):
+    def __init__(self, square_size:int=10, image_size: Tuple[int, int] = (240, 240)):
+        '''
+        Make Checkerboard pattern on the image
+        Args:
+            - square_size (int): size of the squares, default 10
+        '''
+        super().__init__()
+        self.square_size = square_size
+        self.image_size = image_size
+
+        self.mask = torch.ones(image_size)
+        self.mask.unsqueeze_(0)
+
+        h, w = self.mask.size(1), self.mask.size(2)
+        for i in range(0, h, self.square_size):
+            for j in range(0, w, self.square_size):
+                if (i // self.square_size + j // self.square_size) % 2 == 0:
+                    self.mask[:, i:i+self.square_size, j:j+self.square_size] = 0
+
+    def __call__(self) -> torch.tensor:
+        return self.mask 
 
 class RGBToBWTransform:
     def __call__(self, tensor:torch.tensor) -> torch.tensor:
