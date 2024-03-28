@@ -63,10 +63,10 @@ class decoder_block(nn.Module):
 
 class UNet(nn.Module):
     """UNet class based on https://arxiv.org/pdf/1505.04597.pdf."""
-    def __init__(self):
+    def __init__(self, num_out_channels: int = 3):
         super().__init__()
         
-        self.num_classes = 3
+        self.num_out_channels = num_out_channels
 
         # Encoder
         self.down1 = encoder_block(3, 64)
@@ -83,8 +83,12 @@ class UNet(nn.Module):
         self.up3 = decoder_block(256, 128)
         self.up4 = decoder_block(128, 64)
         
+        self.new_head(num_out_channels=self.num_out_channels)
+
+    def new_head(self, num_out_channels: int = 3):
+        self.num_out_channels = num_out_channels
         # 1x1 convolution classifier
-        self.classifier = nn.Conv2d(64, self.num_classes, kernel_size=1, padding=0)
+        self.classifier = nn.Conv2d(64, num_out_channels, kernel_size=1, padding=0)
         
     def forward(self, inputs):
         s1, d1 = self.down1(inputs)
