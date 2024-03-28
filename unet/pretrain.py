@@ -74,9 +74,7 @@ def test_step(test_dl:torch.utils.data.DataLoader, model:nn.Module, criterion:nn
 
 
 if __name__ == '__main__':
-    data_dir = '/home/squirt/Documents/data'
-    folder = join(data_dir, 'adl_data/synthetic_data')
-
+    data_root = "../data"
     # Load the dataset
     all_ds = SynthDataset(folder)
     train_dl, val_dl, test_dl = get_splits(all_ds, batch_size=16, split=.8)
