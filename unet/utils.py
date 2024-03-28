@@ -508,6 +508,25 @@ def get_splits(ds:Dataset, batch_size:int=64, split:float=.8) -> tuple[Dataset, 
 '''
 Training/Testing 
 '''
+
+class InPaintingLoss(nn.Module):
+    def __init__(self, reco_weight:float = 0.99, context_weight:float = 0.01):
+        self._reco_weight = reco_weight
+        self._context_weight = context_weight
+    
+    def __call__(self, model: nn.Module, images: torch.Tensor, masks: torch.Tensor):
+        inverse_mask = 1 - masks
+        
+        reco_norm = masks.count_nonzero()
+        reco_loss = (inverse_mask * (images - model(masks * images))).pow(2).sum() / reco_norm
+
+        context_norm = inverse_mask.count_nonzero()
+        context_loss = (masks * (images - model(inverse_mask * images))).pow(2).sum() / context_norm
+
+        loss = self._reco_weight * reco_loss + self._context_weight * context_loss
+
+        return loss
+
 def iou_score(y_pred:torch.Tensor, y_true:torch.Tensor) -> torch.Tensor:
     '''
     Compute Intersection over Union (IOU) score between predicted and target masks for multiple classes.
@@ -567,5 +586,6 @@ def save_image_output(network:nn.Module, dl:DataLoader, fname:str, device:torch.
             masked_images = dl.dataset.dataset.dataset.image_unnormalize(masked_images)
             outputs = dl.dataset.dataset.dataset.image_unnormalize(outputs)
             # Save the first image
+            outputs = (1 - masks) * outputs + masks * masked_images
             save_image(torch.cat((masked_images, outputs), dim=2), fname)
             break
