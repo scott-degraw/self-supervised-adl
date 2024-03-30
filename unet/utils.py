@@ -23,6 +23,8 @@ from torchvision.utils import save_image
 from torchvision.datasets import OxfordIIITPet
 from torchvision.transforms import functional as F
 
+from torch.cuda.amp import GradScaler, autocast
+
 from PIL import Image
 
 
@@ -154,28 +156,6 @@ def download_dataset(url: str, root: str, dataset_name: str):
     with open(os.path.join(dataset_save_path, "is_extracted"), "w") as _:
         pass
 
-
-def trimap2pil(trimap: torch.Tensor) -> Image:
-    """
-    Create PIL image from trimap tensor. This converts the border, background and pet class ids
-    to colors that look good when displaying.
-    Args:
-        trimap (torch.Tensor): Trimap to extract image from. Shape (B, 1, H, W).
-    """
-    original_background = 2
-    original_border = 3
-    original_pet = 1
-
-    background = 240
-    border = 0
-    pet = 128
-
-    trimap[trimap == original_background] = background
-    trimap[trimap == original_border] = border
-    trimap[trimap == original_pet] = pet
-
-    return F.to_pil_image(trimap.type(torch.uint8))
-
 def images_mean_and_std(fnames: list[str]) -> Tuple[torch.Tensor, torch.Tensor]:
     channel_sums = torch.zeros((3, ))
     square_channel_sums = torch.zeros((3, ))
@@ -183,8 +163,9 @@ def images_mean_and_std(fnames: list[str]) -> Tuple[torch.Tensor, torch.Tensor]:
     num_pixels = 0
 
     for image_number, fname in enumerate(fnames):
-        print(f"{image_number / len(fnames) * 100:4.1f} done \r")
+        print(f"{image_number / len(fnames) * 100:4.1f} done \r", end='')
         image = read_image(fname)
+        image = image[:3, :, :] # If there is a 4th channel ignore it
         image = F.convert_image_dtype(image)
         num_pixels += image.numel() / image.shape[0] # Don't count the subpixels
         summed_image = image.sum((1, 2))
@@ -203,6 +184,8 @@ class OxfordPetsDataset(Dataset):
 
     Image: RGB images
     Trimap: 1:Foreground, 2:Background, 3:Not Classified
+
+    We just take the foreground for image segmentation.
     """
 
     def __init__(
@@ -342,8 +325,7 @@ class OxfordPetsDataset(Dataset):
             index (int): Index at which to extract a PIL version of trimap.
         """
         _, trimap = self.dataset[index]
-        trimap = trimap2pil(trimap)
-        return trimap
+        return F.to_pil_image(trimap)
 
 
 class KaggleDogsAndCats(Dataset):
@@ -353,7 +335,7 @@ class KaggleDogsAndCats(Dataset):
 
     Datset consists of just images.
     """
-    _dataset_name = "Kaggle dogs and cats"
+    _dataset_name = "kaggle_dogs_and_cats"
     _url = "https://liveuclac-my.sharepoint.com/:u:/g/personal/ucabstd_ucl_ac_uk/EXBk_s4yNOxPusy3f85vaHwBFYpd4uzW0dnHSTKjjt1j3A?e=uicsaz&download=1"
     _train_dir = "train"
     _test_dir = "test1"
