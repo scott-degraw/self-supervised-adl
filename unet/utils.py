@@ -628,8 +628,8 @@ def segmentation_image_output(model: nn.Module, dl: DataLoader, fname: str, devi
 
             pred_logits = model(images)
             images = dl.dataset.image_unnormalize(images)
-            pred_logits = nn.functional.sigmoid(pred_logits.expand(-1, images.shape[1], -1, -1))
-            save_image(torch.cat((images, pred_logits), dim=2), fname)
+            pred = nn.functional.sigmoid(pred_logits.expand(-1, images.shape[1], -1, -1))
+            save_image(torch.cat((images, pred), dim=2), fname)
             break
 
 
