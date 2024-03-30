@@ -364,17 +364,19 @@ class KaggleDogsAndCats(Dataset):
         split: Literal["train", "test"] = "train",
         image_size: Tuple[float, float] = (240, 240),
     ):
+        image_means = torch.tensor((0.48621025681495667, 0.4532492756843567, 0.415396124124527))
+        image_stds = torch.tensor((0.26264405250549316, 0.25600874423980713, 0.2586348354816437))
         self.image_transform = transforms.Compose(
             [
                 transforms.ConvertImageDtype(torch.float32),
                 transforms.Resize(size=image_size, antialias=True),
-                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                transforms.Normalize(image_means, image_stds),
             ]
         )
         self.image_unnormalize = transforms.Compose(
             [
-                transforms.Normalize((0, 0, 0), (2.0, 2.0, 2.0)),
-                transforms.Normalize((-0.5, -0.5, -0.5), (1.0, 1.0, 1.0)),
+                transforms.Normalize(torch.zeros_like(image_means), 1 / image_stds),
+                transforms.Normalize(-image_means, torch.ones_like(image_stds)),
             ]
         )
 
