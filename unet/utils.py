@@ -509,10 +509,33 @@ def get_splits(ds:Dataset, batch_size:int=64, split:float=.8) -> tuple[Dataset, 
 Training/Testing 
 '''
 
+# class InPaintingLoss(nn.Module):
+#     def __init__(self, reco_weight:float = 0.99, context_weight:float = 0.01):
+#         super().__init__()
+#         self._reco_weight = reco_weight
+#         self._context_weight = context_weight
+    
+#     def __call__(self, model: nn.Module, images: torch.Tensor, masks: torch.Tensor):
+#         inverse_mask = 1 - masks
+        
+#         reco_norm = masks.count_nonzero()
+#         reco_loss = (inverse_mask * (images - model(masks * images))).pow(2).sum() / reco_norm
+
+#         context_norm = inverse_mask.count_nonzero()
+#         context_loss = (masks * (images - model(inverse_mask * images))).pow(2).sum() / context_norm
+
+#         loss = self._reco_weight * reco_loss + self._context_weight * context_loss
+
+#         return loss
+
 class InPaintingLoss(nn.Module):
-    def __init__(self, reco_weight:float = 0.99, context_weight:float = 0.01):
-        self._reco_weight = reco_weight
-        self._context_weight = context_weight
+    """
+    Loss function for inpainting pretraining task. This loss only considers the reconstruction 
+    of the masked parts of the image not the unmasked. 
+    """
+    
+    def __init__(self):
+        super().__init__()
     
     def __call__(self, model: nn.Module, images: torch.Tensor, masks: torch.Tensor):
         inverse_mask = 1 - masks
@@ -520,46 +543,58 @@ class InPaintingLoss(nn.Module):
         reco_norm = masks.count_nonzero()
         reco_loss = (inverse_mask * (images - model(masks * images))).pow(2).sum() / reco_norm
 
-        context_norm = inverse_mask.count_nonzero()
-        context_loss = (masks * (images - model(inverse_mask * images))).pow(2).sum() / context_norm
-
-        loss = self._reco_weight * reco_loss + self._context_weight * context_loss
-
-        return loss
+        return reco_loss
 
 def iou_score(y_pred:torch.Tensor, y_true:torch.Tensor) -> torch.Tensor:
     '''
-    Compute Intersection over Union (IOU) score between predicted and target masks for multiple classes.
+    Compute Intersection over Union (IOU) score between predicted and target masks for binary classification.
+    Ignores the non-classified 0.5 labels of the trimaps ie IOU metric will not take them into account.
     
     Parameters:
         y_pred (torch.tensor): Predicted masks with shape (batch_size, channels, height, width)
         y_true (torch.tensor): Target masks with shape (batch_size, channels, height, width)
         
     Returns:
-        torch.tensor: IOU score (should be single value)
+        torch.tensor: IOU score (batch_size, )
     ''' 
+    # Flatten each image
+    y_pred = y_pred.reshape((y_pred.shape[0], -1))
+    y_true = y_true.reshape((y_true.shape[0], -1))
 
-    # Flatten the class predictions
-    y_pred = y_pred.ravel()
-    y_true = y_true.ravel()
-
-    segmentation_classes, class_counts = torch.unique(y_pred, return_counts=True)
-    iou_class_scores = torch.zeros_like(segmentation_classes)
-
-    for class_index, cl in enumerate(segmentation_classes):
-        positives = y_pred == cl
-        negatives = ~positives
-
-        correct_identification = y_true == cl
-
-        true_positives = torch.count_nonzero(positives.logical_and(correct_identification))
-        false_positives = torch.count_nonzero(positives.logical_and(~correct_identification))
-        false_negatives = torch.count_nonzero(negatives.logical_and(correct_identification))
-
-        iou = true_positives / (true_positives + false_positives + false_negatives)
-        iou_class_scores[class_index] = iou
+    positives = y_pred == 1
+    negatives = y_pred == 0
     
-    class_proportions = class_counts / class_counts.sum()
+    true_positives = y_true == 1
+    true_negatives = y_true == 0
+
+    true_positives = torch.count_nonzero(positives.logical_and(true_positives))
+    false_positives = torch.count_nonzero(positives.logical_and(true_negatives))
+    false_negatives = torch.count_nonzero(negatives.logical_and(true_positives))
+
+    # Add epsilon so that we do not divide by zero
+    iou = (true_positives + 1e-9) / (true_positives + false_positives + false_negatives + 1e-9)
+
+    return iou
+
+def model_iou(model: nn.Module, eval_dl: DataLoader, device: torch.device):
+    """
+    Calculate the interesction of union (IOU) score for a model and a evaluation dataloader.
+    """
+    iou_sum = 0
+
+    model.eval()
+    with torch.no_grad():
+        for images, trimaps in eval_dl:
+            images = images.to(device)
+            trimaps = trimaps.to(device)
+
+            with autocast():
+                logit_pred = model(images)
+                pred = (torch.sign(logit_pred) + 1) / 2
+
+            iou_sum += iou_score(pred, trimaps).sum()
+    
+    return iou_sum / len(eval_dl.dataset)
 
     # Weighted multi class IOU 
     mIOU = torch.sum(iou_class_scores * class_proportions)
