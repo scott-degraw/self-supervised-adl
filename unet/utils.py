@@ -596,18 +596,31 @@ def model_iou(model: nn.Module, eval_dl: DataLoader, device: torch.device):
     
     return iou_sum / len(eval_dl.dataset)
 
-    # Weighted multi class IOU 
-    mIOU = torch.sum(iou_class_scores * class_proportions)
-    
-    return mIOU
+def segmentation_image_output(model: nn.Module, dl: DataLoader, fname: str, device: torch.device):
+    """
+    Visualise the results of the segmentation training.
+    """
+
+    model.eval()
+    with torch.no_grad():
+        for images, targets in dl:
+            images = images.to(device)
+            targets = targets.to(device)
+
+            pred_logits = model(images)
+            images = dl.dataset.image_unnormalize(images)
+            pred_logits = nn.functional.sigmoid(pred_logits.expand(-1, images.shape[1], -1, -1))
+            save_image(torch.cat((images, pred_logits), dim=2), fname)
+            break
 
 
-def save_image_output(network:nn.Module, dl:DataLoader, fname:str, device:torch.device):
+def pretrain_image_output(model: nn.Module, dl: DataLoader, fname: str, device: torch.device):
     '''
-    Pull an image from the dataloader and save the network's prediction
+    Pull an image from the dataloader and save the network's prediction for pretraining.
+    The parts of the image that are not inpainted are displayed with the original image part.
     '''
 
-    network.eval()
+    model.eval()
     with torch.no_grad():
         for images, masks in dl:
             images = images.to(device)
@@ -616,11 +629,16 @@ def save_image_output(network:nn.Module, dl:DataLoader, fname:str, device:torch.
             masked_images = masks * images
 
             # Forward pass
-            outputs = network(masked_images)
+            outputs = model(masked_images)
 
-            masked_images = dl.dataset.dataset.dataset.image_unnormalize(masked_images)
-            outputs = dl.dataset.dataset.dataset.image_unnormalize(outputs)
-            # Save the first image
-            outputs = (1 - masks) * outputs + masks * masked_images
+            # Get the image_unnormalize function from dataset and extract from various dataset wrappers
+            dataset = dl.dataset
+            while hasattr(dataset, "dataset"):
+                dataset = dataset.dataset
+
+            masked_images = dataset.image_unnormalize(masked_images)
+            outputs = dataset.image_unnormalize(outputs)
+            # For the non masked parts output the true image.
+            outputs = (1 - masks) * outputs + masks * masked_images 
             save_image(torch.cat((masked_images, outputs), dim=2), fname)
             break
