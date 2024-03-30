@@ -419,7 +419,7 @@ class KaggleDogsAndCats(Dataset):
 
 class SynthDataset(Dataset):
     _dataset_name = "stable_diffusion_images"
-    _url = "https://liveuclac-my.sharepoint.com/:u:/g/personal/ucabstd_ucl_ac_uk/EZU5VGweR2JAv0i4Vfr-uvIBw8QkPT_7TTVQXQ4wlAs54w?e=kBDsnU&download=1"
+    _url = "https://liveuclac-my.sharepoint.com/:u:/g/personal/ucabstd_ucl_ac_uk/EbgOQhWYIFJDgaRTsooTH78BEHlOo7KnfkK7BJy6mCTjbw?e=5KiIiC&download=1"
     _train_dir = "stable_diffusion_images"
 
     def __init__(self, root: str, image_size: tuple[int] = (240, 240)):
