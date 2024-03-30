@@ -1,119 +1,241 @@
 from datetime import datetime
 import torch
 import torch.nn as nn
-from torch.optim import Adam 
+from torch.optim import Adam
+from torch.utils.data import random_split
 from os.path import join
 
-from utils import * 
+from utils import *
 from model import UNet
 
-'''
-Device and Data Type
--> if cuda is available, use it
--> if not, use cpu
--> if mac, use mps (metal shaders)
-'''
-DEVICE = torch.device('cuda' if torch.cuda.is_available() else ('mps' if torch.backends.mps.is_available() else 'cpu'))
+import pretrain
+import segmentation_train as train
+
+assert torch.cuda.is_available(), "CUDA support is required"
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu"))
 DTYPE = torch.float32
 
-'''
-Training/Testing Loops
-''' 
-def epoch_step(train_dl:torch.utils.data.DataLoader, model:nn.Module, criterion:nn.Module, optimizer:torch.optim.Optimizer) -> float:
-    '''
-    Do one epoch training Step
-    Inputs:
-        - train_dl (data.DataLoader): training dataloader
-        - model (nn.Module): model to train
-        - criterion (nn.Module): loss function
-        - optimizer (optim.Optimizer): optimizer
-    Returns:
-        - total_loss: total loss for the epoch
-    '''
-    total_loss = 0.
-    model.train()
-    for (inputs, targets) in train_dl:
-        inputs = inputs.to(DEVICE, dtype=DTYPE)
-        targets = targets.to(DEVICE, dtype=torch.long)
-        targets = targets.squeeze(1) - 1
 
-        # Forward pass
-        outputs = model(inputs)
-        loss = criterion(outputs, targets)
-        total_loss += inputs.shape[0] * loss.item()
+class DummyModel(nn.Module):
+    """
+    Dummy model to check training script works. Has single convolutional layer.
+    """
 
-        # Backward pass and Optimize
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+    def __init__(self, num_out_channels):
+        super().__init__()
+        self.num_out_channels = num_out_channels
+        self.new_head(num_out_channels)
+    
+    def new_head(self, num_out_channels):
+        self.head = nn.Conv2d(3, num_out_channels, kernel_size=1)
 
-    return total_loss / len(train_dl.dataset)
+    def __call__(self, images: torch.Tensor):
+        return self.head(images)
 
 
-def test_step(test_dl:torch.utils.data.DataLoader, model:nn.Module, criterion:nn.Module) -> float:
-    '''
-    Test using the validation/test set
-    Inputs:
-        - test_dl (data.DataLoader): test dataloader
-        - model (nn.Module): model to test
-        - criterion (nn.Module): loss function
-    Returns:
-        Loss for the test set
-    '''
-    total_loss = 0.
-    model.eval()
-    with torch.no_grad():
-        for (inputs, targets) in test_dl:
-            inputs = inputs.to(DEVICE, dtype=DTYPE)
-            targets = targets.to(DEVICE, dtype=torch.long)
-            targets = targets.squeeze(1) - 1
+if __name__ == "__main__":
+    torch.manual_seed(780962)
 
-            # Forward pass
-            outputs = model(inputs)
-            loss = criterion(outputs, targets)
-            total_loss += inputs.shape[0] * loss.item()
-    return total_loss / len(test_dl.dataset)
+    batch_size = 32
+    eval_batch_size = 64
+    pretrain_max_num_epochs = 20
+    train_max_num_epochs = 20
+    patience = 5
+    num_workers = 8
 
+    model_class = UNet
 
+    kaggle_pretrain_name = "kaggle_pretrain"
+    synth_pretrain_name = "synth_pretrain"
+    no_pretrain_seg_name = "no_pretrain"
+    kaggle_seg_name = "kaggle_seg"
+    synth_seg_name = "synth_seg"
 
-if __name__ == '__main__':
-    data_dir = '/home/squirt/Documents/data'
-    folder = join(data_dir, 'adl_data/oxford')
+    split = 0.8
 
-    # Load the dataset
-    all_ds = OxfordPetsDataset(folder)
-    train_dl, val_dl, test_dl = get_splits(all_ds, batch_size=16, split=.7)
+    pretrain_num_out_channels = 3 # Reconstruction image
+    seg_num_out_channels = 1 # Foreground, background segmentation
+    square_size = 16
+    image_size = (240, 240)
+    mask_generator = CheckerboardMask(square_size=square_size, image_size=image_size)
 
-    # Model
-    network = UNet()
-    network.load_state_dict(torch.load('unet_pets.pth'))
-    network = network.to(DEVICE, dtype=DTYPE)
-
-    # Loss
-    loss = nn.CrossEntropyLoss()
-
-    # Optimizer
     lr = 1e-3
-    optim = Adam(network.parameters(), lr=lr)
 
-    # Training Loop
-    num_epochs = 5 
-    for e in range(num_epochs):
-        # Train
-        epoch_loss = epoch_step(train_dl, network, loss, optim)
-        print(f'Epoch {e+1} Loss: {epoch_loss}')
-        # Test
-        t_loss = test_step(val_dl, network, loss)
-        print(f'Epoch {e+1} Val Loss: {t_loss}')
+    root_dir = "../data"
 
-    # Test model
-    t_loss = test_step(test_dl, network, loss)
-    print(f'Epoch {e+1} Test Loss: {t_loss}')
+    ### Pretraining ###
+    print("#" * 10 + " Pretraining " + "#" * 10 + "\n")
 
-    # Test output
-    save_image_output(network, test_dl, 'oxford_output.png', DEVICE)
+    criterion = InPaintingLoss()
 
-    # Save the model
-    network = network.to(torch.device('cpu'), torch.float64)
-    torch.save(network.state_dict(), 'unet_oxford.pth')
+    ## Synthetic data pretraing ##
 
+    print("Pretraining on synthetic dataset")
+
+    synth_ds = SynthDataset(root_dir, image_size=image_size)
+
+    pretrain_ds = PretrainingDataset(synth_ds, mask_generator=mask_generator)
+    train_ds, val_ds, test_ds = random_split(pretrain_ds, [split * split, split * (1 - split), 1 - split])
+    print(f"Number of training examples: {len(train_ds)}")
+
+    train_dl = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    val_dl = DataLoader(val_ds, batch_size=eval_batch_size, shuffle=False, num_workers=num_workers)
+    test_dl = DataLoader(test_ds, batch_size=eval_batch_size, shuffle=False, num_workers=num_workers)
+
+    model = model_class(pretrain_num_out_channels).to(DEVICE)
+    optim = Adam(model.parameters(), lr=lr)
+
+    pretrain.train_loop(
+        train_dl=train_dl,
+        val_dl=val_dl,
+        model=model,
+        criterion=criterion,
+        optim=optim,
+        max_num_epochs=pretrain_max_num_epochs,
+        patience=patience,
+    )
+
+    print("Done\n")
+
+    pretrain_image_output(model, test_dl, synth_pretrain_name + ".jpg", DEVICE)
+
+    model = model.to(dtype=torch.float32)
+    torch.save(model.state_dict(), synth_pretrain_name + ".pt")
+
+    ## Kaggle dogs and cats pretraining ##
+
+    print("Pretraining on Kaggle cats and dogs dataset")
+
+    train_val_ds = PretrainingDataset(
+        KaggleDogsAndCats(root_dir, split="train", image_size=image_size), mask_generator=mask_generator
+    )
+    test_ds = PretrainingDataset(
+        KaggleDogsAndCats(root_dir, split="test", image_size=image_size), mask_generator=mask_generator
+    )
+
+    train_ds, val_ds = random_split(train_val_ds, [split, 1 - split])
+    print(f"Number of training examples: {len(train_ds)}")
+
+    train_dl = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    val_dl = DataLoader(val_ds, batch_size=eval_batch_size, shuffle=False, num_workers=num_workers)
+    test_dl = DataLoader(test_ds, batch_size=eval_batch_size, shuffle=False, num_workers=num_workers)
+
+    model = model_class(pretrain_num_out_channels).to(DEVICE)
+    optim = Adam(model.parameters(), lr=lr)
+
+    pretrain.train_loop(
+        train_dl=train_dl,
+        val_dl=val_dl,
+        model=model,
+        criterion=criterion,
+        optim=optim,
+        max_num_epochs=pretrain_max_num_epochs,
+        patience=patience,
+    )
+
+    print("Done\n")
+
+    pretrain_image_output(model, test_dl, kaggle_pretrain_name + ".jpg", DEVICE)
+
+    model = model.to(dtype=torch.float32)
+    torch.save(model.state_dict(), kaggle_pretrain_name + ".pt")
+
+    ### Supervised segmentation training ###
+
+    print("#" * 10 + " Image segmentation training " + "#" * 10 + "\n")
+
+    train_val_ds = OxfordPetsDataset(root_dir, split="train", image_size=image_size)
+    test_ds = OxfordPetsDataset(root_dir, split="test", image_size=image_size)
+    train_ds, val_ds = random_split(train_val_ds, [split, 1 - split])
+    print(f"Number of training examples: {len(train_ds)}")
+
+    train_dl = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    val_dl = DataLoader(val_ds, batch_size=eval_batch_size, shuffle=False, num_workers=num_workers)
+    test_dl = DataLoader(test_ds, batch_size=eval_batch_size, shuffle=False, num_workers=num_workers)
+
+    criterion = nn.BCEWithLogitsLoss()
+
+    ## No pretraining ##
+
+    print("No pretraining")
+
+    model = model_class(seg_num_out_channels).to(DEVICE)
+    optim = Adam(model.parameters(), lr=lr)
+
+    train.train_loop(
+        train_dl=train_dl,
+        val_dl=val_dl,
+        model=model,
+        criterion=criterion,
+        optim=optim,
+        max_num_epochs=train_max_num_epochs,
+        patience=patience,
+    )
+
+    test_score = model_iou(model, test_dl, DEVICE)
+    print(f"Test IOU: {test_score:.4g}")
+
+    segmentation_image_output(model, test_dl, no_pretrain_seg_name + ".jpg", DEVICE)
+
+    model = model.to(dtype=torch.float32)
+    torch.save(model.state_dict(), no_pretrain_seg_name + ".pt")
+
+    print("Done\n")
+
+    ## Kaggle pretrain segmentation ##
+
+    print("Image segmentation train with Kaggle dogs and cats pretrain")
+    model = model_class(pretrain_num_out_channels)
+    model.load_state_dict(torch.load(kaggle_pretrain_name + ".pt"))
+    model.new_head(seg_num_out_channels)
+    model = model.to(DEVICE)
+    optim = Adam(model.parameters(), lr=lr)
+
+    train.train_loop(
+        train_dl=train_dl,
+        val_dl=val_dl,
+        model=model,
+        criterion=criterion,
+        optim=optim,
+        max_num_epochs=train_max_num_epochs,
+        patience=patience,
+    )
+
+    test_score = model_iou(model, test_dl, DEVICE)
+    print(f"Test IOU: {test_score:.4g}")
+
+    segmentation_image_output(model, test_dl, kaggle_seg_name + ".jpg", DEVICE)
+
+    model = model.to(dtype=torch.float32)
+    torch.save(model.state_dict(), kaggle_seg_name + ".pt")
+
+    print("Done\n")
+
+    ## Synthetic pretrain segmentation ##
+
+    print("Image segmentation train with synthetic data pretrain")
+    model = model_class(pretrain_num_out_channels)
+    model.load_state_dict(torch.load(synth_pretrain_name + ".pt"))
+    model.new_head(seg_num_out_channels)
+    model = model.to(DEVICE)
+    optim = Adam(model.parameters(), lr=lr)
+
+    train.train_loop(
+        train_dl=train_dl,
+        val_dl=val_dl,
+        model=model,
+        criterion=criterion,
+        optim=optim,
+        max_num_epochs=train_max_num_epochs,
+        patience=patience,
+    )
+
+    test_score = model_iou(model, test_dl, DEVICE)
+    print(f"Test IOU: {test_score:.4g}")
+
+    segmentation_image_output(model, test_dl, synth_seg_name + ".jpg", DEVICE)
+
+    model = model.to(dtype=torch.float32)
+    torch.save(model.state_dict(), synth_seg_name + ".pt")
+
+    print("Done\n")
