@@ -221,18 +221,22 @@ class OxfordPetsDataset(Dataset):
             image_size (Tuple[int, int], optional): The image size that the dataset images
                 will be resized to. Defaults to (240, 240).
         """
+
+        self.split = split
+        image_means = torch.tensor((0.4778641164302826, 0.443441778421402, 0.3939882814884186))
+        image_stds = torch.tensor((0.2677248418331146, 0.26299381256103516, 0.269730806350708))
         image_transform = transforms.Compose(
             [
                 transforms.ToTensor(),
                 transforms.Resize(size=image_size, antialias=True),
-                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                transforms.Normalize(image_means, image_stds),
             ]
         )
         # Useful transformation to unnormalize images for displaying
         self.image_unnormalize = transforms.Compose(
             [
-                transforms.Normalize((0, 0, 0), (2.0, 2.0, 2.0)),
-                transforms.Normalize((-0.5, -0.5, -0.5), (1.0, 1.0, 1.0)),
+                transforms.Normalize(torch.zeros_like(image_means), 1 / image_stds),
+                transforms.Normalize(-image_means, torch.ones_like(image_stds)),
             ]
         )
 
