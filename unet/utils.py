@@ -240,11 +240,35 @@ class OxfordPetsDataset(Dataset):
             ]
         )
 
+        class Trimap2Class(nn.Module):
+            """
+            Class to convert forground, background and unclassified labels to binary labels
+            """
+            def __init__(self):
+                super().__init__()
+                self.foreground = 1
+                self.background = 2
+                self.not_classified = 3
+            
+            def __call__(self, trimap: torch.Tensor):
+                out = torch.ones_like(trimap, dtype=torch.float32)
+                # Foreground is already correct
+                out[trimap == self.background] = 0.0
+                out[trimap == self.not_classified] = 0.5
+
+                return out
+
         trimap_transform = transforms.Compose(
             [
                 transforms.PILToTensor(),
-                transforms.Lambda(lambda x: x.type(torch.long)),
+                Trimap2Class(),
                 transforms.Resize(size=image_size, antialias=True),
+            ]
+        )
+
+        self.image_augmentations = transforms.Compose(
+            [
+                transforms.ColorJitter(contrast=0.3)
             ]
         )
 
@@ -287,7 +311,16 @@ class OxfordPetsDataset(Dataset):
                 1st item (torch.Tensor): Image. Shape (C, H, W).
                 2nd item (torch.Tensor): Segmentation map. Shape (1, H, W).
         """
-        return self.dataset[index]
+        image, trimap = self.dataset[index]
+
+        if self.split == "train":
+            if torch.rand(1) < 0.5:
+                image = F.vflip(image)
+                trimap = F.vflip(trimap)
+        
+            image = self.image_augmentations(image)
+
+        return image, trimap
 
     def get_image(self, index: int) -> Image:
         """
