@@ -416,21 +416,19 @@ class SynthDataset(Dataset):
         download_dataset(self._url, root, self._dataset_name)
         self.image_fnames = glob("*.png", root_dir=self._image_dir)
 
+        image_means = torch.tensor((0.5498123168945312, 0.4941849112510681, 0.4348284602165222))
+        image_stds = torch.tensor((0.278773695230484, 0.26160579919815063, 0.27657902240753174))
         self.image_transform = transforms.Compose(
             [
                 transforms.ConvertImageDtype(torch.float32),
                 transforms.Resize(size=image_size, antialias=True),
-                transforms.Normalize((0.5498123168945312, 0.4941849112510681, 0.4348284602165222), 
-                                     (0.278773695230484, 0.26160579919815063, 0.27657902240753174)
-                                     ),
+                transforms.Normalize(image_means, image_stds),
             ]
         )
         self.image_unnormalize = transforms.Compose(
             [
-                transforms.Normalize((0, 0, 0), 
-                                     (1 / 0.278773695230484, 1 / 0.26160579919815063, 1 / 0.27657902240753174)),
-                transforms.Normalize((-0.5498123168945312, -0.4941849112510681, -0.4348284602165222),
-                                     (1.0, 1.0, 1.0)),
+                transforms.Normalize(torch.zeros_like(image_means), 1 / image_stds),
+                transforms.Normalize(-image_means, torch.ones_like(image_stds)),
             ]
         )
 
