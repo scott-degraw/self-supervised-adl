@@ -1,7 +1,11 @@
 #
 *.pth
+*.pt
+*.jpg
+*.png
 data/
 notebooks/
+.vscode/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
