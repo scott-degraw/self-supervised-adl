@@ -11,7 +11,6 @@ from model import UNet
 
 # Throw error if cuda not available (sorry mac people)
 assert torch.cuda.is_available(), "CUDA not available"
-DTYPE = None  # None gives default autocast behaviour
 DEVICE = torch.device("cuda")
 SCALER = GradScaler()
 
@@ -41,7 +40,7 @@ def epoch_step(
 
         # Forward pass
         optimizer.zero_grad()
-        with autocast(dtype=DTYPE):
+        with autocast():
             loss = criterion(model=model, images=images, masks=masks)
             total_loss += images.shape[0] * loss.item()
 
@@ -71,7 +70,7 @@ def test_step(test_dl: torch.utils.data.DataLoader, model: nn.Module, criterion:
             masks = masks.to(DEVICE)
 
             # Forward pass
-            with autocast(dtype=DTYPE):
+            with autocast():
                 loss = criterion(model=model, images=images, masks=masks)
                 total_loss += images.shape[0] * loss.item()
 
@@ -98,7 +97,7 @@ def train_loop(
         epoch_loss = epoch_step(train_dl, model, criterion, optim)
         # Test
         val_loss = test_step(val_dl, model, criterion)
-        print(f"Epochs {epoch + 1} Loss: {epoch_loss:.4g} Val loss: {val_loss:.4g}")
+        print(f"Epoch {epoch + 1} Loss: {epoch_loss:.4g} Val loss: {val_loss:.4g}")
 
         # Early stopping
         val_losses.append(val_loss)
@@ -122,9 +121,9 @@ def train_loop(
 
 if __name__ == "__main__":
     torch.manual_seed(438792)
-    batch_size = 25
-    eval_batch_size = 40
-    max_num_epochs = 10
+    batch_size = 32
+    eval_batch_size = 64
+    max_num_epochs = 5
     patience = 5
 
     square_size = 16
@@ -147,7 +146,7 @@ if __name__ == "__main__":
     model = UNet().to(DEVICE)
 
     # Loss
-    criterion = InPaintingLoss(reco_weight=0.99, context_weight=0.01)
+    criterion = InPaintingLoss()
 
     # Optimizer
     lr = 1e-3
@@ -169,7 +168,7 @@ if __name__ == "__main__":
     print(f"Test Loss: {test_loss:.4g}")
 
     # Test output
-    save_image_output(model, test_dl, "pretrain_output.png", DEVICE)
+    pretrain_image_output(model, test_dl, "pretrain_output.png", DEVICE)
 
     # Save the model
     model = model.to(torch.device("cpu"), torch.float64)
