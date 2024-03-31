@@ -25,7 +25,7 @@ class DummyModel(nn.Module):
         super().__init__()
         self.num_out_channels = num_out_channels
         self.new_head(num_out_channels)
-    
+
     def new_head(self, num_out_channels):
         self.head = nn.Conv2d(3, num_out_channels, kernel_size=1)
 
@@ -62,6 +62,10 @@ if __name__ == "__main__":
     lr = 1e-3
 
     root_dir = "../data"
+    saved_model_dir = "../saved_models"
+    example_images_dir = "../example_images"
+    os.makedirs(saved_model_dir, exist_ok=True)
+    os.makedirs(example_images_dir, exist_ok=True)
 
     ### Pretraining ###
     print("#" * 10 + " Pretraining " + "#" * 10 + "\n")
@@ -97,10 +101,10 @@ if __name__ == "__main__":
 
     print("Done\n")
 
-    pretrain_image_output(model, test_dl, synth_pretrain_name + ".jpg", DEVICE)
+    pretrain_image_output(model, test_dl, os.path.join(example_images_dir, synth_pretrain_name + ".jpg"), DEVICE)
 
     model = model.to(dtype=torch.float32)
-    torch.save(model.state_dict(), synth_pretrain_name + ".pt")
+    torch.save(model.state_dict(), os.path.join(saved_model_dir, synth_pretrain_name + ".pt"))
 
     ## Kaggle dogs and cats pretraining ##
 
@@ -135,10 +139,10 @@ if __name__ == "__main__":
 
     print("Done\n")
 
-    pretrain_image_output(model, test_dl, kaggle_pretrain_name + ".jpg", DEVICE)
+    pretrain_image_output(model, test_dl, os.path.join(example_images_dir, kaggle_pretrain_name + ".jpg"), DEVICE)
 
     model = model.to(dtype=torch.float32)
-    torch.save(model.state_dict(), kaggle_pretrain_name + ".pt")
+    torch.save(model.state_dict(), os.path.join(saved_model_dir, kaggle_pretrain_name + ".pt"))
 
     ### Supervised segmentation training ###
 
@@ -175,10 +179,10 @@ if __name__ == "__main__":
     test_score = model_iou(model, test_dl, DEVICE)
     print(f"Test IOU: {test_score:.4g}")
 
-    segmentation_image_output(model, test_dl, no_pretrain_seg_name + ".jpg", DEVICE)
+    segmentation_image_output(model, test_dl, os.path.join(example_images_dir, no_pretrain_seg_name + ".jpg"), DEVICE)
 
     model = model.to(dtype=torch.float32)
-    torch.save(model.state_dict(), no_pretrain_seg_name + ".pt")
+    torch.save(model.state_dict(), os.path.join(saved_model_dir, no_pretrain_seg_name + ".pt"))
 
     print("Done\n")
 
@@ -186,7 +190,7 @@ if __name__ == "__main__":
 
     print("Image segmentation train with Kaggle dogs and cats pretrain")
     model = model_class(pretrain_num_out_channels)
-    model.load_state_dict(torch.load(kaggle_pretrain_name + ".pt"))
+    model.load_state_dict(torch.load(os.path.join(saved_model_dir, kaggle_pretrain_name + ".pt")))
     model.new_head(seg_num_out_channels)
     model = model.to(DEVICE)
     optim = Adam(model.parameters(), lr=lr)
@@ -204,10 +208,10 @@ if __name__ == "__main__":
     test_score = model_iou(model, test_dl, DEVICE)
     print(f"Test IOU: {test_score:.4g}")
 
-    segmentation_image_output(model, test_dl, kaggle_seg_name + ".jpg", DEVICE)
+    segmentation_image_output(model, test_dl, os.path.join(example_images_dir, kaggle_seg_name + ".jpg"), DEVICE)
 
     model = model.to(dtype=torch.float32)
-    torch.save(model.state_dict(), kaggle_seg_name + ".pt")
+    torch.save(model.state_dict(), os.path.join(saved_model_dir, kaggle_seg_name + ".pt"))
 
     print("Done\n")
 
@@ -215,7 +219,7 @@ if __name__ == "__main__":
 
     print("Image segmentation train with synthetic data pretrain")
     model = model_class(pretrain_num_out_channels)
-    model.load_state_dict(torch.load(synth_pretrain_name + ".pt"))
+    model.load_state_dict(torch.load(os.path.join(saved_model_dir, synth_pretrain_name + ".pt")))
     model.new_head(seg_num_out_channels)
     model = model.to(DEVICE)
     optim = Adam(model.parameters(), lr=lr)
@@ -233,9 +237,9 @@ if __name__ == "__main__":
     test_score = model_iou(model, test_dl, DEVICE)
     print(f"Test IOU: {test_score:.4g}")
 
-    segmentation_image_output(model, test_dl, synth_seg_name + ".jpg", DEVICE)
+    segmentation_image_output(model, test_dl, os.path.join(example_images_dir, synth_seg_name + ".jpg"), DEVICE)
 
     model = model.to(dtype=torch.float32)
-    torch.save(model.state_dict(), synth_seg_name + ".pt")
+    torch.save(model.state_dict(), os.path.join(saved_model_dir, synth_seg_name + ".pt"))
 
     print("Done\n")
