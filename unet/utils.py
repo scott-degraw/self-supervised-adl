@@ -27,6 +27,8 @@ from torch.cuda.amp import GradScaler, autocast
 
 from PIL import Image
 
+from torchmetrics.functional.classification import jaccard_index
+
 
 '''
 Transforms
@@ -564,55 +566,28 @@ class InPaintingLoss(nn.Module):
 
         return reco_loss
 
-def iou_score(y_pred:torch.Tensor, y_true:torch.Tensor) -> torch.Tensor:
-    '''
-    Compute Intersection over Union (IOU) score between predicted and target masks for binary classification.
-    Ignores the non-classified 0.5 labels of the trimaps ie IOU metric will not take them into account.
-    
-    Parameters:
-        y_pred (torch.tensor): Predicted masks with shape (batch_size, channels, height, width)
-        y_true (torch.tensor): Target masks with shape (batch_size, channels, height, width)
-        
-    Returns:
-        torch.tensor: IOU score (batch_size, )
-    ''' 
-    # Flatten each image
-    y_pred = y_pred.reshape((y_pred.shape[0], -1))
-    y_true = y_true.reshape((y_true.shape[0], -1))
-
-    positives = y_pred == 1
-    negatives = y_pred == 0
-    
-    true_positives = y_true == 1
-    true_negatives = y_true == 0
-
-    true_positives = torch.count_nonzero(positives.logical_and(true_positives))
-    false_positives = torch.count_nonzero(positives.logical_and(true_negatives))
-    false_negatives = torch.count_nonzero(negatives.logical_and(true_positives))
-
-    # Add epsilon so that we do not divide by zero
-    iou = (true_positives + 1e-9) / (true_positives + false_positives + false_negatives + 1e-9)
-
-    return iou
-
 def model_iou(model: nn.Module, eval_dl: DataLoader, device: torch.device):
     """
     Calculate the interesction of union (IOU) score for a model and a evaluation dataloader.
     """
-    iou_sum = 0
 
     model.eval()
+    iou_sum = 0
+
     with torch.no_grad():
         for images, trimaps in eval_dl:
             images = images.to(device)
             trimaps = trimaps.to(device)
 
+            batch_size = images.shape[0]
+
             with autocast():
                 logit_pred = model(images)
-                pred = (torch.sign(logit_pred) + 1) / 2
+                preds = (torch.sign(logit_pred) + 1) / 2
+            
+            #TODO: this is kind of wrong
+            iou_sum += batch_size * jaccard_index(preds, trimaps, task="binary")
 
-            iou_sum += iou_score(pred, trimaps).sum()
-    
     return iou_sum / len(eval_dl.dataset)
 
 def segmentation_image_output(model: nn.Module, dl: DataLoader, fname: str, device: torch.device):
