@@ -213,7 +213,7 @@ class OxfordPetsDataset(Dataset):
         image_transform = transforms.Compose(
             [
                 transforms.ToTensor(),
-                transforms.Resize(size=image_size, antialias=True),
+                transforms.Resize(size=image_size, interpolation=transforms.InterpolationMode.NEAREST),
                 transforms.Normalize(image_means, image_stds),
             ]
         )
@@ -247,7 +247,7 @@ class OxfordPetsDataset(Dataset):
             [
                 transforms.PILToTensor(),
                 Trimap2Class(),
-                transforms.Resize(size=image_size, antialias=True),
+                transforms.Resize(size=image_size, interpolation=transforms.InterpolationMode.NEAREST),
             ]
         )
 

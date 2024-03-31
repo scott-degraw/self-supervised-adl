@@ -101,7 +101,7 @@ def train_loop(
         epoch_loss = epoch_step(train_dl, model, criterion, optim)
         # Test
         val_score = model_iou(model, val_dl, DEVICE)
-        print(f"Epoch {epoch + 1} Loss: {epoch_loss:.4g} Val iou: {val_score:.4g}")
+        print(f"Epoch {epoch + 1} Loss: {epoch_loss:.4g} Val IOU: {val_score:.4g}")
 
         # Early stopping
         val_scores.append(val_score)
