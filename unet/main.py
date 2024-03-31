@@ -68,7 +68,7 @@ if __name__ == "__main__":
 
     criterion = InPaintingLoss()
 
-    ## Synthetic data pretraing ##
+    ## Synthetic data pretraining ##
 
     print("Pretraining on synthetic dataset")
 
