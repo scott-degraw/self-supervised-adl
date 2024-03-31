@@ -91,7 +91,7 @@ def train_loop(
     patience: int = 5,
 ):
     val_scores = []
-    best_val_score = torch.inf
+    best_val_score = -torch.inf
     no_improvement_counter = 0
 
     model_state_dicts = []
@@ -126,7 +126,7 @@ if __name__ == '__main__':
     torch.manual_seed(879)
     batch_size = 32
     eval_batch_size = 64
-    max_num_epochs = 20
+    max_num_epochs = 5
     patience = 5
     split = 0.8
 
@@ -164,7 +164,6 @@ if __name__ == '__main__':
     )
 
     # Save the model
-    model = model.to(torch.device('cpu'), torch.float64)
 
     torch.save(model.state_dict(), 'unet_segmentation.pt')
 
@@ -173,6 +172,7 @@ if __name__ == '__main__':
     print(f'Test Loss: {test_score}')
 
     model.load_state_dict(torch.load('unet_segmentation.pt'))
+    model.to(DEVICE)
 
     # Test output
     segmentation_image_output(model, test_dl, 'oxford_output.png', DEVICE)
