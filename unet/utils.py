@@ -180,6 +180,24 @@ def images_mean_and_std(fnames: list[str]) -> Tuple[torch.Tensor, torch.Tensor]:
 
     return means, std
 
+class Trimap2Class(nn.Module):
+    """
+    Class to convert forground, background and unclassified labels to binary labels
+    """
+    def __init__(self):
+        super().__init__()
+        self.foreground = 1
+        self.background = 2
+        self.not_classified = 3
+    
+    def __call__(self, trimap: torch.Tensor):
+        out = torch.ones_like(trimap, dtype=torch.float32)
+        # Foreground is already correct
+        out[trimap == self.background] = 0.0
+        out[trimap == self.not_classified] = 0.5
+
+        return out
+
 class OxfordPetsDataset(Dataset):
     """
     PyTorch Dataset for the Oxford Pets Dataset
@@ -224,24 +242,6 @@ class OxfordPetsDataset(Dataset):
                 transforms.Normalize(-image_means, torch.ones_like(image_stds)),
             ]
         )
-
-        class Trimap2Class(nn.Module):
-            """
-            Class to convert forground, background and unclassified labels to binary labels
-            """
-            def __init__(self):
-                super().__init__()
-                self.foreground = 1
-                self.background = 2
-                self.not_classified = 3
-            
-            def __call__(self, trimap: torch.Tensor):
-                out = torch.ones_like(trimap, dtype=torch.float32)
-                # Foreground is already correct
-                out[trimap == self.background] = 0.0
-                out[trimap == self.not_classified] = 0.5
-
-                return out
 
         trimap_transform = transforms.Compose(
             [
