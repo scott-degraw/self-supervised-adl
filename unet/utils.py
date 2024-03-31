@@ -251,12 +251,6 @@ class OxfordPetsDataset(Dataset):
             ]
         )
 
-        self.image_augmentations = transforms.Compose(
-            [
-                transforms.ColorJitter(contrast=0.3)
-            ]
-        )
-
         super().__init__()
 
         self.image_size = image_size
@@ -296,16 +290,7 @@ class OxfordPetsDataset(Dataset):
                 1st item (torch.Tensor): Image. Shape (C, H, W).
                 2nd item (torch.Tensor): Segmentation map. Shape (1, H, W).
         """
-        image, trimap = self.dataset[index]
-
-        if self.split == "train":
-            if torch.rand(1) < 0.5:
-                image = F.vflip(image)
-                trimap = F.vflip(trimap)
-        
-            image = self.image_augmentations(image)
-
-        return image, trimap
+        return self.dataset[index]
 
     def get_image(self, index: int) -> Image:
         """
