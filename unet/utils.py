@@ -574,6 +574,8 @@ def model_iou(model: nn.Module, eval_dl: DataLoader, device: torch.device):
     model.eval()
     iou_sum = 0
 
+    jaccard = JaccardIndex(task="binary", ignore_index=2)
+
     with torch.no_grad():
         for images, trimaps in eval_dl:
             images = images.to(device)
@@ -586,9 +588,12 @@ def model_iou(model: nn.Module, eval_dl: DataLoader, device: torch.device):
                 preds = (torch.sign(logit_pred) + 1) / 2
             
             #TODO: this is kind of wrong
-            iou_sum += batch_size * jaccard_index(preds, trimaps, task="binary")
+            # classified values to 2 so that they can be ignored with "ignore_index"
+            # We want to ignore the "Not-classified" pixels of the trimap so set the 0.5 not
+            trimaps[trimaps == 0.5] = 2
+            jaccard.update(preds, trimaps)
 
-    return iou_sum / len(eval_dl.dataset)
+    return jaccard.compute()
 
 def segmentation_image_output(model: nn.Module, dl: DataLoader, fname: str, device: torch.device):
     """
