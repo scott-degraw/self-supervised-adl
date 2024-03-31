@@ -27,7 +27,7 @@ from torch.cuda.amp import GradScaler, autocast
 
 from PIL import Image
 
-from torchmetrics.functional.classification import jaccard_index
+from torchmetrics.classification import JaccardIndex
 
 
 '''
@@ -557,24 +557,20 @@ def model_iou(model: nn.Module, eval_dl: DataLoader, device: torch.device):
     """
 
     model.eval()
-    iou_sum = 0
 
-    jaccard = JaccardIndex(task="binary", ignore_index=2)
+    jaccard = JaccardIndex(task="binary", ignore_index=2).to(device)
 
     with torch.no_grad():
         for images, trimaps in eval_dl:
             images = images.to(device)
             trimaps = trimaps.to(device)
 
-            batch_size = images.shape[0]
-
             with autocast():
                 logit_pred = model(images)
                 preds = (torch.sign(logit_pred) + 1) / 2
             
-            #TODO: this is kind of wrong
-            # classified values to 2 so that they can be ignored with "ignore_index"
-            # We want to ignore the "Not-classified" pixels of the trimap so set the 0.5 not
+            # We want to ignore the "Not-classified" pixels of the trimap so set the 0.5 to 2
+            # so we can ingore this class in the classifications
             trimaps[trimaps == 0.5] = 2
             jaccard.update(preds, trimaps)
 
