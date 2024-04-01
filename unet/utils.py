@@ -406,8 +406,8 @@ class KaggleDogsAndCats(Dataset):
 
 class SynthDataset(Dataset):
     _dataset_name = "stable_diffusion_images"
-    _url = "https://liveuclac-my.sharepoint.com/:u:/g/personal/ucabstd_ucl_ac_uk/EbgOQhWYIFJDgaRTsooTH78BEHlOo7KnfkK7BJy6mCTjbw?e=5KiIiC&download=1"
-    _train_dir = "stable_diffusion_images"
+    _url = "https://liveuclac-my.sharepoint.com/:u:/g/personal/ucabstd_ucl_ac_uk/EYwlyTA_OJRFjOdG_Pyghy4BzRN_oRluOIKsJia8u-YarQ?e=UsC46i&download=1"
+    _train_dir = "ef_synthetic_pets"
 
     def __init__(self, root: str, image_size: tuple[int] = (240, 240)):
         """
@@ -424,8 +424,8 @@ class SynthDataset(Dataset):
         download_dataset(self._url, root, self._dataset_name)
         self.image_fnames = glob("*.png", root_dir=self._image_dir)
 
-        image_means = torch.tensor((0.5498123168945312, 0.4941849112510681, 0.4348284602165222))
-        image_stds = torch.tensor((0.278773695230484, 0.26160579919815063, 0.27657902240753174))
+        image_means = torch.tensor((0.45749059319496155, 0.45294874906539917, 0.37832725048065186))
+        image_stds = torch.tensor((0.25951141119003296, 0.25185921788215637, 0.26507002115249634))
         self.image_transform = transforms.Compose(
             [
                 transforms.ConvertImageDtype(torch.float32),
