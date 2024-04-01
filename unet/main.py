@@ -36,36 +36,36 @@ class DummyModel(nn.Module):
 if __name__ == "__main__":
     torch.manual_seed(780962)
 
-    batch_size = 32
-    eval_batch_size = 64
-    pretrain_max_num_epochs = 20
-    train_max_num_epochs = 20
-    patience = 5
-    num_workers = 8
+    BATCH_SIZE = 32
+    EVAL_BATCH_SIZE = 64
+    PRETRAIN_MAX_NUM_EPOCHS = 1
+    TRAIN_MAX_NUM_EPOCHS = 1
+    PATIENCE = 5
+    NUM_WORKERS = 8
 
-    model_class = UNet
+    MODEL_CLASS = UNet
 
-    kaggle_pretrain_name = "kaggle_pretrain"
-    synth_pretrain_name = "synth_pretrain"
-    no_pretrain_seg_name = "no_pretrain"
-    kaggle_seg_name = "kaggle_seg"
-    synth_seg_name = "synth_seg"
+    KAGGLE_PRETRAIN_NAME = "kaggle_pretrain"
+    SYNTH_PRETRAIN_NAME = "synth_pretrain"
+    NO_PRETRAIN_SEG_NAME = "no_pretrain"
+    KAGGLE_SEG_NAME = "kaggle_seg"
+    SYNTH_SEG_NAME = "synth_seg"
 
-    split = 0.8
+    SPLIT = 0.8
 
-    pretrain_num_out_channels = 3 # Reconstruction image
-    seg_num_out_channels = 1 # Foreground, background segmentation
-    square_size = 16
-    image_size = (240, 240)
-    mask_generator = CheckerboardMask(square_size=square_size, image_size=image_size)
+    PRETRAIN_NUM_OUT_CHANNELS = 3 # Reconstruction image
+    SEG_NUM_OUT_CHANNELS = 1 # Foreground, background segmentation
+    SQUARE_SIZE = 16
+    IMAGE_SIZE = (240, 240)
+    MASK_GENERATOR = CheckerboardMask(square_size=SQUARE_SIZE, image_size=IMAGE_SIZE)
 
-    lr = 1e-3
+    LR = 1e-3
 
-    root_dir = "../data"
-    saved_model_dir = "../saved_models"
-    example_images_dir = "../example_images"
-    os.makedirs(saved_model_dir, exist_ok=True)
-    os.makedirs(example_images_dir, exist_ok=True)
+    ROOT_DIR = "../data"
+    SAVED_MODEL_DIR = "../saved_models"
+    EXAMPLE_IMAGES_DIR = "../example_images"
+    os.makedirs(SAVED_MODEL_DIR, exist_ok=True)
+    os.makedirs(EXAMPLE_IMAGES_DIR, exist_ok=True)
 
     ### Pretraining ###
     print("#" * 10 + " Pretraining " + "#" * 10 + "\n")
@@ -76,18 +76,18 @@ if __name__ == "__main__":
 
     print("Pretraining on synthetic dataset")
 
-    synth_ds = SynthDataset(root_dir, image_size=image_size)
+    synth_ds = SynthDataset(ROOT_DIR, image_size=IMAGE_SIZE)
 
-    pretrain_ds = PretrainingDataset(synth_ds, mask_generator=mask_generator)
-    train_ds, val_ds, test_ds = random_split(pretrain_ds, [split * split, split * (1 - split), 1 - split])
+    pretrain_ds = PretrainingDataset(synth_ds, mask_generator=MASK_GENERATOR)
+    train_ds, val_ds, test_ds = random_split(pretrain_ds, [SPLIT * SPLIT, SPLIT * (1 - SPLIT), 1 - SPLIT])
     print(f"Number of training examples: {len(train_ds)}")
 
-    train_dl = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    val_dl = DataLoader(val_ds, batch_size=eval_batch_size, shuffle=False, num_workers=num_workers)
-    test_dl = DataLoader(test_ds, batch_size=eval_batch_size, shuffle=False, num_workers=num_workers)
+    train_dl = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS)
+    val_dl = DataLoader(val_ds, batch_size=EVAL_BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS)
+    test_dl = DataLoader(test_ds, batch_size=EVAL_BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS)
 
-    model = model_class(pretrain_num_out_channels).to(DEVICE)
-    optim = Adam(model.parameters(), lr=lr)
+    model = MODEL_CLASS(PRETRAIN_NUM_OUT_CHANNELS).to(DEVICE)
+    optim = Adam(model.parameters(), lr=LR)
 
     pretrain.train_loop(
         train_dl=train_dl,
@@ -95,37 +95,37 @@ if __name__ == "__main__":
         model=model,
         criterion=criterion,
         optim=optim,
-        max_num_epochs=pretrain_max_num_epochs,
-        patience=patience,
+        max_num_epochs=PRETRAIN_MAX_NUM_EPOCHS,
+        patience=PATIENCE,
     )
 
     print("Done\n")
 
-    pretrain_image_output(model, test_dl, os.path.join(example_images_dir, synth_pretrain_name + ".jpg"), DEVICE)
+    pretrain_image_output(model, test_dl, os.path.join(EXAMPLE_IMAGES_DIR, SYNTH_PRETRAIN_NAME + ".jpg"), DEVICE)
 
     model = model.to(dtype=torch.float32)
-    torch.save(model.state_dict(), os.path.join(saved_model_dir, synth_pretrain_name + ".pt"))
+    torch.save(model.state_dict(), os.path.join(SAVED_MODEL_DIR, SYNTH_PRETRAIN_NAME + ".pt"))
 
     ## Kaggle dogs and cats pretraining ##
 
     print("Pretraining on Kaggle cats and dogs dataset")
 
     train_val_ds = PretrainingDataset(
-        KaggleDogsAndCats(root_dir, split="train", image_size=image_size), mask_generator=mask_generator
+        KaggleDogsAndCats(ROOT_DIR, split="train", image_size=IMAGE_SIZE), mask_generator=MASK_GENERATOR
     )
     test_ds = PretrainingDataset(
-        KaggleDogsAndCats(root_dir, split="test", image_size=image_size), mask_generator=mask_generator
+        KaggleDogsAndCats(ROOT_DIR, split="test", image_size=IMAGE_SIZE), mask_generator=MASK_GENERATOR
     )
 
-    train_ds, val_ds = random_split(train_val_ds, [split, 1 - split])
+    train_ds, val_ds = random_split(train_val_ds, [SPLIT, 1 - SPLIT])
     print(f"Number of training examples: {len(train_ds)}")
 
-    train_dl = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    val_dl = DataLoader(val_ds, batch_size=eval_batch_size, shuffle=False, num_workers=num_workers)
-    test_dl = DataLoader(test_ds, batch_size=eval_batch_size, shuffle=False, num_workers=num_workers)
+    train_dl = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS)
+    val_dl = DataLoader(val_ds, batch_size=EVAL_BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS)
+    test_dl = DataLoader(test_ds, batch_size=EVAL_BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS)
 
-    model = model_class(pretrain_num_out_channels).to(DEVICE)
-    optim = Adam(model.parameters(), lr=lr)
+    model = MODEL_CLASS(PRETRAIN_NUM_OUT_CHANNELS).to(DEVICE)
+    optim = Adam(model.parameters(), lr=LR)
 
     pretrain.train_loop(
         train_dl=train_dl,
@@ -133,29 +133,29 @@ if __name__ == "__main__":
         model=model,
         criterion=criterion,
         optim=optim,
-        max_num_epochs=pretrain_max_num_epochs,
-        patience=patience,
+        max_num_epochs=PRETRAIN_MAX_NUM_EPOCHS,
+        patience=PATIENCE,
     )
 
     print("Done\n")
 
-    pretrain_image_output(model, test_dl, os.path.join(example_images_dir, kaggle_pretrain_name + ".jpg"), DEVICE)
+    pretrain_image_output(model, test_dl, os.path.join(EXAMPLE_IMAGES_DIR, KAGGLE_PRETRAIN_NAME + ".jpg"), DEVICE)
 
     model = model.to(dtype=torch.float32)
-    torch.save(model.state_dict(), os.path.join(saved_model_dir, kaggle_pretrain_name + ".pt"))
+    torch.save(model.state_dict(), os.path.join(SAVED_MODEL_DIR, KAGGLE_PRETRAIN_NAME + ".pt"))
 
     ### Supervised segmentation training ###
 
     print("#" * 10 + " Image segmentation training " + "#" * 10 + "\n")
 
-    train_val_ds = OxfordPetsDataset(root_dir, split="train", image_size=image_size)
-    test_ds = OxfordPetsDataset(root_dir, split="test", image_size=image_size)
-    train_ds, val_ds = random_split(train_val_ds, [split, 1 - split])
+    train_val_ds = OxfordPetsDataset(ROOT_DIR, split="train", image_size=IMAGE_SIZE)
+    test_ds = OxfordPetsDataset(ROOT_DIR, split="test", image_size=IMAGE_SIZE)
+    train_ds, val_ds = random_split(train_val_ds, [SPLIT, 1 - SPLIT])
     print(f"Number of training examples: {len(train_ds)}")
 
-    train_dl = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    val_dl = DataLoader(val_ds, batch_size=eval_batch_size, shuffle=False, num_workers=num_workers)
-    test_dl = DataLoader(test_ds, batch_size=eval_batch_size, shuffle=False, num_workers=num_workers)
+    train_dl = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS)
+    val_dl = DataLoader(val_ds, batch_size=EVAL_BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS)
+    test_dl = DataLoader(test_ds, batch_size=EVAL_BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS)
 
     criterion = nn.BCEWithLogitsLoss()
 
@@ -163,8 +163,8 @@ if __name__ == "__main__":
 
     print("No pretraining")
 
-    model = model_class(seg_num_out_channels).to(DEVICE)
-    optim = Adam(model.parameters(), lr=lr)
+    model = MODEL_CLASS(SEG_NUM_OUT_CHANNELS).to(DEVICE)
+    optim = Adam(model.parameters(), lr=LR)
 
     train.train_loop(
         train_dl=train_dl,
@@ -172,28 +172,28 @@ if __name__ == "__main__":
         model=model,
         criterion=criterion,
         optim=optim,
-        max_num_epochs=train_max_num_epochs,
-        patience=patience,
+        max_num_epochs=TRAIN_MAX_NUM_EPOCHS,
+        patience=PATIENCE,
     )
 
     test_score = model_iou(model, test_dl, DEVICE)
     print(f"Test IOU: {test_score:.4g}")
 
-    segmentation_image_output(model, test_dl, os.path.join(example_images_dir, no_pretrain_seg_name + ".jpg"), DEVICE)
+    segmentation_image_output(model, test_dl, os.path.join(EXAMPLE_IMAGES_DIR, NO_PRETRAIN_SEG_NAME + ".jpg"), DEVICE)
 
     model = model.to(dtype=torch.float32)
-    torch.save(model.state_dict(), os.path.join(saved_model_dir, no_pretrain_seg_name + ".pt"))
+    torch.save(model.state_dict(), os.path.join(SAVED_MODEL_DIR, NO_PRETRAIN_SEG_NAME + ".pt"))
 
     print("Done\n")
 
     ## Kaggle pretrain segmentation ##
 
     print("Image segmentation train with Kaggle dogs and cats pretrain")
-    model = model_class(pretrain_num_out_channels)
-    model.load_state_dict(torch.load(os.path.join(saved_model_dir, kaggle_pretrain_name + ".pt")))
-    model.new_head(seg_num_out_channels)
+    model = MODEL_CLASS(PRETRAIN_NUM_OUT_CHANNELS)
+    model.load_state_dict(torch.load(os.path.join(SAVED_MODEL_DIR, KAGGLE_PRETRAIN_NAME + ".pt")))
+    model.new_head(SEG_NUM_OUT_CHANNELS)
     model = model.to(DEVICE)
-    optim = Adam(model.parameters(), lr=lr)
+    optim = Adam(model.parameters(), lr=LR)
 
     train.train_loop(
         train_dl=train_dl,
@@ -201,28 +201,28 @@ if __name__ == "__main__":
         model=model,
         criterion=criterion,
         optim=optim,
-        max_num_epochs=train_max_num_epochs,
-        patience=patience,
+        max_num_epochs=TRAIN_MAX_NUM_EPOCHS,
+        patience=PATIENCE,
     )
 
     test_score = model_iou(model, test_dl, DEVICE)
     print(f"Test IOU: {test_score:.4g}")
 
-    segmentation_image_output(model, test_dl, os.path.join(example_images_dir, kaggle_seg_name + ".jpg"), DEVICE)
+    segmentation_image_output(model, test_dl, os.path.join(EXAMPLE_IMAGES_DIR, KAGGLE_SEG_NAME + ".jpg"), DEVICE)
 
     model = model.to(dtype=torch.float32)
-    torch.save(model.state_dict(), os.path.join(saved_model_dir, kaggle_seg_name + ".pt"))
+    torch.save(model.state_dict(), os.path.join(SAVED_MODEL_DIR, KAGGLE_SEG_NAME + ".pt"))
 
     print("Done\n")
 
     ## Synthetic pretrain segmentation ##
 
     print("Image segmentation train with synthetic data pretrain")
-    model = model_class(pretrain_num_out_channels)
-    model.load_state_dict(torch.load(os.path.join(saved_model_dir, synth_pretrain_name + ".pt")))
-    model.new_head(seg_num_out_channels)
+    model = MODEL_CLASS(PRETRAIN_NUM_OUT_CHANNELS)
+    model.load_state_dict(torch.load(os.path.join(SAVED_MODEL_DIR, SYNTH_PRETRAIN_NAME + ".pt")))
+    model.new_head(SEG_NUM_OUT_CHANNELS)
     model = model.to(DEVICE)
-    optim = Adam(model.parameters(), lr=lr)
+    optim = Adam(model.parameters(), lr=LR)
 
     train.train_loop(
         train_dl=train_dl,
@@ -230,16 +230,16 @@ if __name__ == "__main__":
         model=model,
         criterion=criterion,
         optim=optim,
-        max_num_epochs=train_max_num_epochs,
-        patience=patience,
+        max_num_epochs=TRAIN_MAX_NUM_EPOCHS,
+        patience=PATIENCE,
     )
 
     test_score = model_iou(model, test_dl, DEVICE)
     print(f"Test IOU: {test_score:.4g}")
 
-    segmentation_image_output(model, test_dl, os.path.join(example_images_dir, synth_seg_name + ".jpg"), DEVICE)
+    segmentation_image_output(model, test_dl, os.path.join(EXAMPLE_IMAGES_DIR, SYNTH_SEG_NAME + ".jpg"), DEVICE)
 
     model = model.to(dtype=torch.float32)
-    torch.save(model.state_dict(), os.path.join(saved_model_dir, synth_seg_name + ".pt"))
+    torch.save(model.state_dict(), os.path.join(SAVED_MODEL_DIR, SYNTH_SEG_NAME + ".pt"))
 
     print("Done\n")
