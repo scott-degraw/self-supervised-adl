@@ -1,5 +1,3 @@
-/home/squirt/.my_conda/envs/adl/lib/python3.12/site-packages/torch/utils/data/dataset.py:449: UserWarning: Length of split at index 1 is 0. This might result in an empty dataset.
-  warnings.warn(f"Length of split at index {i} is 0. "
 ########## Image segmentation training ##########
 
 Number of training examples: 2945
@@ -71,3 +69,74 @@ Done
 Image segmentation train with Kaggle dogs and cats pretrain
 Epoch 1 Loss: 0.5595 Val IOU: 0.4448
 Epoch 2 Loss: 0.44 Val IOU: 0.5258
+Epoch 3 Loss: 0.3993 Val IOU: 0.5803
+Epoch 4 Loss: 0.3733 Val IOU: 0.6119
+Epoch 5 Loss: 0.3453 Val IOU: 0.6939
+Test IOU: 0.7119
+Done
+
+Image segmentation train with synthetic data pretrain
+Epoch 1 Loss: 0.5435 Val IOU: 0.3782
+Epoch 2 Loss: 0.4341 Val IOU: 0.5024
+Epoch 3 Loss: 0.3941 Val IOU: 0.5847
+Epoch 4 Loss: 0.3673 Val IOU: 0.5467
+Epoch 5 Loss: 0.367 Val IOU: 0.7041
+Test IOU: 0.7233
+Done
+
+Number of training examples: 277
+No pretraining
+Epoch 1 Loss: 0.6962 Val IOU: 0.3246
+Epoch 2 Loss: 0.635 Val IOU: 0.3063
+Epoch 3 Loss: 0.5914 Val IOU: 0.2741
+Epoch 4 Loss: 0.5415 Val IOU: 0.3672
+Epoch 5 Loss: 0.5129 Val IOU: 0.4129
+Test IOU: 0.442
+Done
+
+Image segmentation train with Kaggle dogs and cats pretrain
+Epoch 1 Loss: 0.6789 Val IOU: 0.3705
+Epoch 2 Loss: 0.5593 Val IOU: 0.3273
+Epoch 3 Loss: 0.5286 Val IOU: 0.375
+Epoch 4 Loss: 0.4864 Val IOU: 0.4861
+Epoch 5 Loss: 0.4484 Val IOU: 0.6032
+Test IOU: 0.5838
+Done
+
+Image segmentation train with synthetic data pretrain
+Epoch 1 Loss: 0.663 Val IOU: 0.3376
+Epoch 2 Loss: 0.5636 Val IOU: 0.3951
+Epoch 3 Loss: 0.5199 Val IOU: 0.4445
+Epoch 4 Loss: 0.4721 Val IOU: 0.5184
+Epoch 5 Loss: 0.4361 Val IOU: 0.5654
+Test IOU: 0.5569
+Done
+
+Number of training examples: 29
+No pretraining
+Epoch 1 Loss: 0.8149 Val IOU: 0.2961
+Epoch 2 Loss: 0.7388 Val IOU: 0.3011
+Epoch 3 Loss: 0.6752 Val IOU: 0.3079
+Epoch 4 Loss: 0.6256 Val IOU: 0.2663
+Epoch 5 Loss: 0.5916 Val IOU: 0.2873
+Test IOU: 0.3216
+Done
+
+Image segmentation train with Kaggle dogs and cats pretrain
+Epoch 1 Loss: 0.7402 Val IOU: 0.2954
+Epoch 2 Loss: 0.6571 Val IOU: 0.32
+Epoch 3 Loss: 0.6175 Val IOU: 0.38
+Epoch 4 Loss: 0.5878 Val IOU: 0.4078
+Epoch 5 Loss: 0.5451 Val IOU: 0.3239
+Test IOU: 0.3913
+Done
+
+Image segmentation train with synthetic data pretrain
+Epoch 1 Loss: 0.7678 Val IOU: 0.3202
+Epoch 2 Loss: 0.6724 Val IOU: 0.3088
+Epoch 3 Loss: 0.6226 Val IOU: 0.2188
+Epoch 4 Loss: 0.5688 Val IOU: 0.5974
+Epoch 5 Loss: 0.5287 Val IOU: 0.34
+Test IOU: 0.4232
+Done
+
