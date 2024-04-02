@@ -1,0 +1,84 @@
+/home/squirt/.my_conda/envs/adl/lib/python3.12/site-packages/torch/utils/data/dataset.py:449: UserWarning: Length of split at index 1 is 0. This might result in an empty dataset.
+  warnings.warn(f"Length of split at index {i} is 0. "
+########## Image segmentation training ##########
+
+Number of training examples: 2945
+No pretraining
+Epoch 1 Loss: 0.5059 Val IOU: 0.5671
+Test IOU: 0.5738
+Done
+
+Image segmentation train with Kaggle dogs and cats pretrain
+Epoch 1 Loss: 0.4805 Val IOU: 0.598
+Test IOU: 0.6048
+Done
+
+Image segmentation train with synthetic data pretrain
+Epoch 1 Loss: 0.4696 Val IOU: 0.6648
+Test IOU: 0.6559
+Done
+
+Number of training examples: 2209
+No pretraining
+Epoch 1 Loss: 0.5146 Val IOU: 0.5488
+Test IOU: 0.5521
+Done
+
+Image segmentation train with Kaggle dogs and cats pretrain
+Epoch 1 Loss: 0.4651 Val IOU: 0.5994
+Test IOU: 0.6064
+Done
+
+Image segmentation train with synthetic data pretrain
+Epoch 1 Loss: 0.4735 Val IOU: 0.474
+Test IOU: 0.4728
+Done
+
+Number of training examples: 1105
+No pretraining
+Epoch 1 Loss: 0.591 Val IOU: 0.2868
+Test IOU: 0.2736
+Done
+
+Image segmentation train with Kaggle dogs and cats pretrain
+Epoch 1 Loss: 0.5201 Val IOU: 0.4384
+Test IOU: 0.4535
+Done
+
+Image segmentation train with synthetic data pretrain
+Epoch 1 Loss: 0.5229 Val IOU: 0.4808
+Test IOU: 0.4988
+Done
+
+Number of training examples: 277
+No pretraining
+Epoch 1 Loss: 0.6721 Val IOU: 0.1724
+Test IOU: 0.1677
+Done
+
+Image segmentation train with Kaggle dogs and cats pretrain
+Epoch 1 Loss: 0.6263 Val IOU: 0.3554
+Test IOU: 0.3528
+Done
+
+Image segmentation train with synthetic data pretrain
+Epoch 1 Loss: 0.6163 Val IOU: 0.2887
+Test IOU: 0.2882
+Done
+
+Number of training examples: 29
+No pretraining
+Epoch 1 Loss: 0.6818 Val IOU: 0.00031
+Test IOU: 0.0001672
+Done
+
+Image segmentation train with Kaggle dogs and cats pretrain
+Epoch 1 Loss: 0.6806 Val IOU: 0.1422
+Test IOU: 0.1327
+Done
+
+Image segmentation train with synthetic data pretrain
+Epoch 1 Loss: 0.6601 Val IOU: 0.013
+Test IOU: 0.01576
+Done
+
