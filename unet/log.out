@@ -4,81 +4,70 @@
 
 Number of training examples: 2945
 No pretraining
-Epoch 1 Loss: 0.5059 Val IOU: 0.5671
-Test IOU: 0.5738
+Epoch 1 Loss: 0.5092 Val IOU: 0.4859
+Epoch 2 Loss: 0.4524 Val IOU: 0.5381
+Epoch 3 Loss: 0.4285 Val IOU: 0.6526
+Epoch 4 Loss: 0.3936 Val IOU: 0.6765
+Epoch 5 Loss: 0.3711 Val IOU: 0.6638
+Test IOU: 0.6804
 Done
 
 Image segmentation train with Kaggle dogs and cats pretrain
-Epoch 1 Loss: 0.4805 Val IOU: 0.598
-Test IOU: 0.6048
+Epoch 1 Loss: 0.5017 Val IOU: 0.5465
+Epoch 2 Loss: 0.4285 Val IOU: 0.6318
+Epoch 3 Loss: 0.3719 Val IOU: 0.568
+Epoch 4 Loss: 0.3553 Val IOU: 0.6932
+Epoch 5 Loss: 0.3278 Val IOU: 0.6235
+Test IOU: 0.69
 Done
 
 Image segmentation train with synthetic data pretrain
-Epoch 1 Loss: 0.4696 Val IOU: 0.6648
-Test IOU: 0.6559
+Epoch 1 Loss: 0.4621 Val IOU: 0.6139
+Epoch 2 Loss: 0.3656 Val IOU: 0.7016
+Epoch 3 Loss: 0.3253 Val IOU: 0.7768
+Epoch 4 Loss: 0.3037 Val IOU: 0.7204
+Epoch 5 Loss: 0.3041 Val IOU: 0.8055
+Test IOU: 0.8055
 Done
 
 Number of training examples: 2209
 No pretraining
-Epoch 1 Loss: 0.5146 Val IOU: 0.5488
-Test IOU: 0.5521
+Epoch 1 Loss: 0.6245 Val IOU: 0.3953
+Epoch 2 Loss: 0.4994 Val IOU: 0.5839
+Epoch 3 Loss: 0.4417 Val IOU: 0.5481
+Epoch 4 Loss: 0.4084 Val IOU: 0.6531
+Epoch 5 Loss: 0.3939 Val IOU: 0.69
+Test IOU: 0.6845
 Done
 
 Image segmentation train with Kaggle dogs and cats pretrain
-Epoch 1 Loss: 0.4651 Val IOU: 0.5994
-Test IOU: 0.6064
+Epoch 1 Loss: 0.5214 Val IOU: 0.5525
+Epoch 2 Loss: 0.4072 Val IOU: 0.5978
+Epoch 3 Loss: 0.3863 Val IOU: 0.6674
+Epoch 4 Loss: 0.3496 Val IOU: 0.7438
+Epoch 5 Loss: 0.333 Val IOU: 0.7248
+Test IOU: 0.7387
 Done
 
 Image segmentation train with synthetic data pretrain
-Epoch 1 Loss: 0.4735 Val IOU: 0.474
-Test IOU: 0.4728
+Epoch 1 Loss: 0.4874 Val IOU: 0.628
+Epoch 2 Loss: 0.3733 Val IOU: 0.6404
+Epoch 3 Loss: 0.3296 Val IOU: 0.7722
+Epoch 4 Loss: 0.312 Val IOU: 0.7746
+Epoch 5 Loss: 0.2851 Val IOU: 0.7798
+Test IOU: 0.7801
 Done
 
 Number of training examples: 1105
 No pretraining
-Epoch 1 Loss: 0.591 Val IOU: 0.2868
-Test IOU: 0.2736
+Epoch 1 Loss: 0.6559 Val IOU: 0.001134
+Epoch 2 Loss: 0.5357 Val IOU: 0.4816
+Epoch 3 Loss: 0.4743 Val IOU: 0.4809
+Epoch 4 Loss: 0.4569 Val IOU: 0.5338
+Epoch 5 Loss: 0.44 Val IOU: 0.5596
+Test IOU: 0.5695
 Done
 
 Image segmentation train with Kaggle dogs and cats pretrain
-Epoch 1 Loss: 0.5201 Val IOU: 0.4384
-Test IOU: 0.4535
-Done
-
-Image segmentation train with synthetic data pretrain
-Epoch 1 Loss: 0.5229 Val IOU: 0.4808
-Test IOU: 0.4988
-Done
-
-Number of training examples: 277
-No pretraining
-Epoch 1 Loss: 0.6721 Val IOU: 0.1724
-Test IOU: 0.1677
-Done
-
-Image segmentation train with Kaggle dogs and cats pretrain
-Epoch 1 Loss: 0.6263 Val IOU: 0.3554
-Test IOU: 0.3528
-Done
-
-Image segmentation train with synthetic data pretrain
-Epoch 1 Loss: 0.6163 Val IOU: 0.2887
-Test IOU: 0.2882
-Done
-
-Number of training examples: 29
-No pretraining
-Epoch 1 Loss: 0.6818 Val IOU: 0.00031
-Test IOU: 0.0001672
-Done
-
-Image segmentation train with Kaggle dogs and cats pretrain
-Epoch 1 Loss: 0.6806 Val IOU: 0.1422
-Test IOU: 0.1327
-Done
-
-Image segmentation train with synthetic data pretrain
-Epoch 1 Loss: 0.6601 Val IOU: 0.013
-Test IOU: 0.01576
-Done
-
+Epoch 1 Loss: 0.5595 Val IOU: 0.4448
+Epoch 2 Loss: 0.44 Val IOU: 0.5258
