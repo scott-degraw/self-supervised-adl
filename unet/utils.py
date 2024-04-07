@@ -588,7 +588,11 @@ def segmentation_image_output(model: nn.Module, dl: DataLoader, fname: str, devi
             targets = targets.to(device)
 
             pred_logits = model(images)
-            images = dl.dataset.image_unnormalize(images)
+            dataset = dl.dataset
+            # Get the image_unnormalize function from dataset and extract from various dataset wrappers
+            while not hasattr(dataset, "image_unnormalize"):
+                dataset = dataset.dataset
+            images = dataset.image_unnormalize(images)
             pred = (torch.sign(pred_logits.expand(-1, images.shape[1], -1, -1)) + 1) / 2
 
             targets = targets.expand(-1, images.shape[1], -1, -1)
@@ -615,7 +619,7 @@ def pretrain_image_output(model: nn.Module, dl: DataLoader, fname: str, device: 
 
             # Get the image_unnormalize function from dataset and extract from various dataset wrappers
             dataset = dl.dataset
-            while hasattr(dataset, "dataset"):
+            while not hasattr(dataset, "image_unnormalize"):
                 dataset = dataset.dataset
 
             masked_images = dataset.image_unnormalize(masked_images)
