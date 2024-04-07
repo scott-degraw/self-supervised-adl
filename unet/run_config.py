@@ -4,7 +4,9 @@ import torch.nn as nn
 from utils import *
 from model import UNet
 
-assert torch.cuda.is_available(), "CUDA support is required"
+if not torch.cuda.is_available():
+    print("WARNING: CUDA support is strongly recommended")
+
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu"))
 DTYPE = torch.float32
 
