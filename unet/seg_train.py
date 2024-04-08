@@ -123,7 +123,10 @@ if __name__=="__main__":
     train_sample_splits = [1.0, 0.75, 0.5, 0.25, 0.1, 0.05]
 
     for train_split in train_sample_splits:
-        train_val_ds, _ = random_split(full_train_val_ds, [train_split, 1 - train_split])
+        if train_split != 1.0:
+            train_val_ds, _ = random_split(full_train_val_ds, [train_split, 1 - train_split])
+        else:
+            train_val_ds = full_train_val_ds
 
         train_ds, val_ds = random_split(train_val_ds, [SPLIT, 1 - SPLIT])
         print(f"Number of training examples: {len(train_ds)}")
