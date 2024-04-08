@@ -1,21 +1,27 @@
 from os.path import join
+import csv
+
 
 import torch
 import torch.nn as nn
 
-from torch.optim import Adam 
+from torch.optim import Adam
 from torch.cuda.amp import autocast
 
 from torch.utils.data import random_split
 
-from utils import * 
+from utils import *
 from run_config import *
 
-'''
+"""
 Training/Testing Loops
-''' 
-def epoch_step(train_dl:torch.utils.data.DataLoader, model:nn.Module, criterion:nn.Module, optimizer:torch.optim.Optimizer) -> float:
-    '''
+"""
+
+
+def epoch_step(
+    train_dl: torch.utils.data.DataLoader, model: nn.Module, criterion: nn.Module, optimizer: torch.optim.Optimizer
+) -> float:
+    """
     Do one epoch training Step
     Inputs:
         - train_dl (data.DataLoader): training dataloader
@@ -24,10 +30,10 @@ def epoch_step(train_dl:torch.utils.data.DataLoader, model:nn.Module, criterion:
         - optimizer (optim.Optimizer): optimizer
     Returns:
         - total_loss: total loss for the epoch
-    '''
-    total_loss = 0.
+    """
+    total_loss = 0.0
     model.train()
-    for (inputs, targets) in train_dl:
+    for inputs, targets in train_dl:
         inputs = inputs.to(DEVICE)
         targets = targets.to(DEVICE)
 
@@ -46,8 +52,8 @@ def epoch_step(train_dl:torch.utils.data.DataLoader, model:nn.Module, criterion:
     return total_loss / len(train_dl.dataset)
 
 
-def test_step(test_dl:torch.utils.data.DataLoader, model:nn.Module, criterion:nn.Module) -> float:
-    '''
+def test_step(test_dl: torch.utils.data.DataLoader, model: nn.Module, criterion: nn.Module) -> float:
+    """
     Test using the validation/test set
     Inputs:
         - test_dl (data.DataLoader): test dataloader
@@ -55,11 +61,11 @@ def test_step(test_dl:torch.utils.data.DataLoader, model:nn.Module, criterion:nn
         - criterion (nn.Module): loss function
     Returns:
         Loss for the test set
-    '''
-    total_loss = 0.
+    """
+    total_loss = 0.0
     model.eval()
     with torch.no_grad():
-        for (inputs, targets) in test_dl:
+        for inputs, targets in test_dl:
             inputs = inputs.to(DEVICE)
             targets = targets.to(DEVICE)
 
@@ -70,6 +76,7 @@ def test_step(test_dl:torch.utils.data.DataLoader, model:nn.Module, criterion:nn
                 total_loss += targets.shape[0] * loss.item()
 
     return total_loss / len(test_dl.dataset)
+
 
 def train_loop(
     train_dl: DataLoader,
@@ -112,9 +119,10 @@ def train_loop(
     best_val_score = val_scores[best_epoch]
     model.load_state_dict(model_state_dicts[best_epoch])
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     torch.manual_seed(1537890)
-    
+
     print("#" * 10 + " Image segmentation training " + "#" * 10 + "\n")
 
     full_train_val_ds = OxfordPetsDataset(ROOT_DIR, split="train", image_size=IMAGE_SIZE)
@@ -122,102 +130,129 @@ if __name__=="__main__":
 
     train_sample_splits = [1.0, 0.75, 0.5, 0.25, 0.1, 0.05]
 
-    for train_split in train_sample_splits:
-        if train_split != 1.0:
-            train_val_ds, _ = random_split(full_train_val_ds, [train_split, 1 - train_split])
-        else:
-            train_val_ds = full_train_val_ds
+    n_runs = 5
+    test_IOUs_fname = "test_IOUs.csv"
+    test_IOUs = dict(no_pretrain=[], kaggle_pretrain=[], synth_pretrain=[])
 
-        train_ds, val_ds = random_split(train_val_ds, [SPLIT, 1 - SPLIT])
-        print(f"Number of training examples: {len(train_ds)}")
+    for run in range(n_runs):
+        print(f"##### run {run + 1} #####")
+        for train_split in train_sample_splits:
+            if train_split != 1.0:
+                train_val_ds, _ = random_split(full_train_val_ds, [train_split, 1 - train_split])
+            else:
+                train_val_ds = full_train_val_ds
 
-        train_dl = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS)
-        val_dl = DataLoader(val_ds, batch_size=EVAL_BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS)
-        test_dl = DataLoader(test_ds, batch_size=EVAL_BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS)
+            train_ds, val_ds = random_split(train_val_ds, [SPLIT, 1 - SPLIT])
+            print(f"Number of training examples: {len(train_ds)}")
 
-        criterion = nn.BCEWithLogitsLoss()
+            train_dl = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS)
+            val_dl = DataLoader(val_ds, batch_size=EVAL_BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS)
+            test_dl = DataLoader(test_ds, batch_size=EVAL_BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS)
 
-        ## No pretraining ##
+            criterion = nn.BCEWithLogitsLoss()
 
-        print("No pretraining")
+            ## No pretraining ##
 
-        model = MODEL_CLASS(SEG_NUM_OUT_CHANNELS).to(DEVICE)
-        optim = Adam(model.parameters(), lr=LR)
+            print("No pretraining")
 
-        train_loop(
-            train_dl=train_dl,
-            val_dl=val_dl,
-            model=model,
-            criterion=criterion,
-            optim=optim,
-            max_num_epochs=TRAIN_MAX_NUM_EPOCHS,
-            patience=PATIENCE,
-        )
+            model = MODEL_CLASS(SEG_NUM_OUT_CHANNELS).to(DEVICE)
+            optim = Adam(model.parameters(), lr=LR)
 
-        test_score = model_iou(model, test_dl, DEVICE)
-        print(f"Test IOU: {test_score:.4g}")
+            train_loop(
+                train_dl=train_dl,
+                val_dl=val_dl,
+                model=model,
+                criterion=criterion,
+                optim=optim,
+                max_num_epochs=TRAIN_MAX_NUM_EPOCHS,
+                patience=PATIENCE,
+            )
 
-        segmentation_image_output(model, test_dl, os.path.join(EXAMPLE_IMAGES_DIR, NO_PRETRAIN_SEG_NAME + ".jpg"), DEVICE)
+            test_score = model_iou(model, test_dl, DEVICE)
+            test_IOUs["no_pretrain"].append(test_score)
+            print(f"Test IOU: {test_score:.4g}")
 
-        model = model.to(dtype=torch.float32)
-        torch.save(model.state_dict(), os.path.join(SAVED_MODEL_DIR, NO_PRETRAIN_SEG_NAME + ".pt"))
+            segmentation_image_output(
+                model, test_dl, os.path.join(EXAMPLE_IMAGES_DIR, NO_PRETRAIN_SEG_NAME + ".jpg"), DEVICE
+            )
 
-        print("Done\n")
+            model = model.to(dtype=torch.float32)
+            torch.save(model.state_dict(), os.path.join(SAVED_MODEL_DIR, NO_PRETRAIN_SEG_NAME + ".pt"))
 
-        ## Kaggle pretrain segmentation ##
+            print("Done\n")
 
-        print("Image segmentation train with Kaggle dogs and cats pretrain")
-        model = MODEL_CLASS(PRETRAIN_NUM_OUT_CHANNELS)
-        model.load_state_dict(torch.load(os.path.join(SAVED_MODEL_DIR, KAGGLE_PRETRAIN_NAME + ".pt")))
-        model.new_head(SEG_NUM_OUT_CHANNELS)
-        model = model.to(DEVICE)
-        optim = Adam(model.parameters(), lr=LR)
+            ## Kaggle pretrain segmentation ##
 
-        train_loop(
-            train_dl=train_dl,
-            val_dl=val_dl,
-            model=model,
-            criterion=criterion,
-            optim=optim,
-            max_num_epochs=TRAIN_MAX_NUM_EPOCHS,
-            patience=PATIENCE,
-        )
+            print("Image segmentation train with Kaggle dogs and cats pretrain")
+            model = MODEL_CLASS(PRETRAIN_NUM_OUT_CHANNELS)
+            model.load_state_dict(torch.load(os.path.join(SAVED_MODEL_DIR, KAGGLE_PRETRAIN_NAME + ".pt")))
+            model.new_head(SEG_NUM_OUT_CHANNELS)
+            model = model.to(DEVICE)
+            optim = Adam(model.parameters(), lr=LR)
 
-        test_score = model_iou(model, test_dl, DEVICE)
-        print(f"Test IOU: {test_score:.4g}")
+            train_loop(
+                train_dl=train_dl,
+                val_dl=val_dl,
+                model=model,
+                criterion=criterion,
+                optim=optim,
+                max_num_epochs=TRAIN_MAX_NUM_EPOCHS,
+                patience=PATIENCE,
+            )
 
-        segmentation_image_output(model, test_dl, os.path.join(EXAMPLE_IMAGES_DIR, KAGGLE_SEG_NAME + ".jpg"), DEVICE)
+            test_score = model_iou(model, test_dl, DEVICE)
+            test_IOUs["kaggle_pretrain"].append(test_score)
+            print(f"Test IOU: {test_score:.4g}")
 
-        model = model.to(dtype=torch.float32)
-        torch.save(model.state_dict(), os.path.join(SAVED_MODEL_DIR, KAGGLE_SEG_NAME + ".pt"))
+            segmentation_image_output(
+                model, test_dl, os.path.join(EXAMPLE_IMAGES_DIR, KAGGLE_SEG_NAME + ".jpg"), DEVICE
+            )
 
-        print("Done\n")
+            model = model.to(dtype=torch.float32)
+            torch.save(model.state_dict(), os.path.join(SAVED_MODEL_DIR, KAGGLE_SEG_NAME + ".pt"))
 
-        ## Synthetic pretrain segmentation ##
+            print("Done\n")
 
-        print("Image segmentation train with synthetic data pretrain")
-        model = MODEL_CLASS(PRETRAIN_NUM_OUT_CHANNELS)
-        model.load_state_dict(torch.load(os.path.join(SAVED_MODEL_DIR, SYNTH_PRETRAIN_NAME + ".pt")))
-        model.new_head(SEG_NUM_OUT_CHANNELS)
-        model = model.to(DEVICE)
-        optim = Adam(model.parameters(), lr=LR)
+            ## Synthetic pretrain segmentation ##
 
-        train_loop(
-            train_dl=train_dl,
-            val_dl=val_dl,
-            model=model,
-            criterion=criterion,
-            optim=optim,
-            max_num_epochs=TRAIN_MAX_NUM_EPOCHS,
-            patience=PATIENCE,
-        )
+            print("Image segmentation train with synthetic data pretrain")
+            model = MODEL_CLASS(PRETRAIN_NUM_OUT_CHANNELS)
+            model.load_state_dict(torch.load(os.path.join(SAVED_MODEL_DIR, SYNTH_PRETRAIN_NAME + ".pt")))
+            model.new_head(SEG_NUM_OUT_CHANNELS)
+            model = model.to(DEVICE)
+            optim = Adam(model.parameters(), lr=LR)
 
-        test_score = model_iou(model, test_dl, DEVICE)
-        print(f"Test IOU: {test_score:.4g}")
+            train_loop(
+                train_dl=train_dl,
+                val_dl=val_dl,
+                model=model,
+                criterion=criterion,
+                optim=optim,
+                max_num_epochs=TRAIN_MAX_NUM_EPOCHS,
+                patience=PATIENCE,
+            )
 
-        segmentation_image_output(model, test_dl, os.path.join(EXAMPLE_IMAGES_DIR, SYNTH_SEG_NAME + ".jpg"), DEVICE)
+            test_score = model_iou(model, test_dl, DEVICE)
+            test_IOUs["synth_pretrain"].append(test_score)
+            print(f"Test IOU: {test_score:.4g}")
 
-        model = model.to(dtype=torch.float32)
-        torch.save(model.state_dict(), os.path.join(SAVED_MODEL_DIR, SYNTH_SEG_NAME + ".pt"))
+            segmentation_image_output(model, test_dl, os.path.join(EXAMPLE_IMAGES_DIR, SYNTH_SEG_NAME + ".jpg"), DEVICE)
 
-        print("Done\n")
+            model = model.to(dtype=torch.float32)
+            torch.save(model.state_dict(), os.path.join(SAVED_MODEL_DIR, SYNTH_SEG_NAME + ".pt"))
+
+            print("Done\n")
+
+    # Writing test IOU values to csv file
+    with open(join(SAVED_MODEL_DIR, test_IOUs_fname), "w") as csvfile:
+        # The keys of the first dictionary are used as the column names
+        writer = csv.DictWriter(csvfile, fieldnames=test_IOUs.keys())
+        writer.writeheader()
+        for i in range(n_runs):
+            writer.writerow(
+                dict(
+                    no_pretrain=test_IOUs["no_pretrain"][i].item(),
+                    kaggle_pretrain=test_IOUs["kaggle_pretrain"][i].item(),
+                    synth_pretrain=test_IOUs["synth_pretrain"][i].item(),
+                )
+            )
