@@ -117,13 +117,13 @@ if __name__=="__main__":
     
     print("#" * 10 + " Image segmentation training " + "#" * 10 + "\n")
 
-    train_val_ds = OxfordPetsDataset(ROOT_DIR, split="train", image_size=IMAGE_SIZE)
+    full_train_val_ds = OxfordPetsDataset(ROOT_DIR, split="train", image_size=IMAGE_SIZE)
     test_ds = OxfordPetsDataset(ROOT_DIR, split="test", image_size=IMAGE_SIZE)
 
-    train_sample_splits = [1.0, 0.75, 0.5, 0.25, 0.1]
+    train_sample_splits = [1.0, 0.75, 0.5, 0.25, 0.1, 0.05]
 
     for train_split in train_sample_splits:
-        train_val_ds, _ = random_split(train_val_ds, [train_split, 1 - train_split])
+        train_val_ds, _ = random_split(full_train_val_ds, [train_split, 1 - train_split])
 
         train_ds, val_ds = random_split(train_val_ds, [SPLIT, 1 - SPLIT])
         print(f"Number of training examples: {len(train_ds)}")
