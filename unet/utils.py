@@ -625,6 +625,9 @@ def pretrain_image_output(model: nn.Module, dl: DataLoader, fname: str, device: 
             masked_images = dataset.image_unnormalize(masked_images)
             outputs = dataset.image_unnormalize(outputs)
             # For the non masked parts output the true image.
-            outputs = (1 - masks) * outputs + masks * masked_images 
+            outputs = (1 - masks) * outputs + masked_images 
+
+            # Make sure masked parts of images are white instead of grey
+            masked_images += 1 - masks
             save_image(torch.cat((masked_images, outputs), dim=2), fname)
             break
