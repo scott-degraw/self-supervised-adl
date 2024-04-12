@@ -131,9 +131,6 @@ if __name__ == "__main__":
     train_sample_splits = [1.0, 0.75, 0.5, 0.25, 0.1, 0.05]
 
     n_runs = 5
-    test_IOUs_fname = "test_IOUs.csv"
-    test_IOUs = dict(no_pretrain=[], kaggle_pretrain=[], synth_pretrain=[])
-
     for run in range(n_runs):
         print(f"##### run {run + 1} #####")
         for train_split in train_sample_splits:
@@ -242,17 +239,3 @@ if __name__ == "__main__":
             torch.save(model.state_dict(), os.path.join(SAVED_MODEL_DIR, SYNTH_SEG_NAME + f"_size_{len(train_ds)}_run_{run}" +".pt"))
 
             print("Done\n")
-
-    # Writing test IOU values to csv file
-    with open(join(SAVED_MODEL_DIR, test_IOUs_fname), "w") as csvfile:
-        # The keys of the first dictionary are used as the column names
-        writer = csv.DictWriter(csvfile, fieldnames=test_IOUs.keys())
-        writer.writeheader()
-        for i in range(n_runs):
-            writer.writerow(
-                dict(
-                    no_pretrain=test_IOUs["no_pretrain"][i].item(),
-                    kaggle_pretrain=test_IOUs["kaggle_pretrain"][i].item(),
-                    synth_pretrain=test_IOUs["synth_pretrain"][i].item(),
-                )
-            )
