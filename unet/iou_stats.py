@@ -10,13 +10,14 @@ from model import UNet
 from run_config import *
 
 TEST_IOUS_FNAME = "test_ious.csv"
+EVAL_BATCH_SIZE = 256
 
 if __name__ == "__main__":
     test_ds = OxfordPetsDataset(root=ROOT_DIR, split="test", image_size=IMAGE_SIZE)
     test_dl = DataLoader(test_ds, batch_size=EVAL_BATCH_SIZE, shuffle=False)
 
     kaggle_models = glob(r"kaggle_seg_size*.pt", root_dir=SAVED_MODEL_DIR)
-    synth_models = glob(r"synth_size*.pt", root_dir=SAVED_MODEL_DIR)
+    synth_models = glob(r"synth_seg_size*.pt", root_dir=SAVED_MODEL_DIR)
     no_pretrain_models = glob(r"no_pretrain_size*.pt", root_dir=SAVED_MODEL_DIR)
 
     model_types = ("kaggle_seg", "synth_seg", "no_pretrain")
@@ -40,6 +41,7 @@ if __name__ == "__main__":
                 model.load_state_dict(torch.load(model_path, map_location=DEVICE))
                 model = model.to(DEVICE)
                 test_iou = model_iou(model, test_dl, DEVICE).item()
+                print(f"{model_name}, train_size: {train_size}, run: {run}, test IOU: {test_iou:.4g}")
 
                 writer.writerow(
                     {
