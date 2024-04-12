@@ -170,11 +170,17 @@ if __name__ == "__main__":
             print(f"Test IOU: {test_score:.4g}")
 
             segmentation_image_output(
-                model, test_dl, os.path.join(EXAMPLE_IMAGES_DIR, NO_PRETRAIN_SEG_NAME + f"_size_{len(train_ds)}_run_{run}" + ".jpg"), DEVICE
+                model,
+                test_dl,
+                os.path.join(EXAMPLE_IMAGES_DIR, NO_PRETRAIN_SEG_NAME + f"_size_{len(train_ds)}_run_{run}" + ".jpg"),
+                DEVICE,
             )
 
             model = model.to(dtype=torch.float32)
-            torch.save(model.state_dict(), os.path.join(SAVED_MODEL_DIR, NO_PRETRAIN_SEG_NAME + f"_size_{len(train_ds)}_run_{run}" +".pt"))
+            torch.save(
+                model.state_dict(),
+                os.path.join(SAVED_MODEL_DIR, NO_PRETRAIN_SEG_NAME + f"_size_{len(train_ds)}_run_{run}" + ".pt"),
+            )
 
             print("Done\n")
 
@@ -182,7 +188,9 @@ if __name__ == "__main__":
 
             print("Image segmentation train with Kaggle dogs and cats pretrain")
             model = MODEL_CLASS(PRETRAIN_NUM_OUT_CHANNELS)
-            model.load_state_dict(torch.load(os.path.join(SAVED_MODEL_DIR, KAGGLE_PRETRAIN_NAME + ".pt")))
+            model.load_state_dict(
+                torch.load(os.path.join(SAVED_MODEL_DIR, KAGGLE_PRETRAIN_NAME + ".pt"), map_location=DEVICE)
+            )
             model.new_head(SEG_NUM_OUT_CHANNELS)
             model = model.to(DEVICE)
             optim = Adam(model.parameters(), lr=LR)
@@ -202,11 +210,17 @@ if __name__ == "__main__":
             print(f"Test IOU: {test_score:.4g}")
 
             segmentation_image_output(
-                model, test_dl, os.path.join(EXAMPLE_IMAGES_DIR, KAGGLE_SEG_NAME + f"_size_{len(train_ds)}_run_{run}" +".jpg"), DEVICE
+                model,
+                test_dl,
+                os.path.join(EXAMPLE_IMAGES_DIR, KAGGLE_SEG_NAME + f"_size_{len(train_ds)}_run_{run}" + ".jpg"),
+                DEVICE,
             )
 
             model = model.to(dtype=torch.float32)
-            torch.save(model.state_dict(), os.path.join(SAVED_MODEL_DIR, KAGGLE_SEG_NAME + f"_size_{len(train_ds)}_run_{run}" +".pt"))
+            torch.save(
+                model.state_dict(),
+                os.path.join(SAVED_MODEL_DIR, KAGGLE_SEG_NAME + f"_size_{len(train_ds)}_run_{run}" + ".pt"),
+            )
 
             print("Done\n")
 
@@ -214,7 +228,9 @@ if __name__ == "__main__":
 
             print("Image segmentation train with synthetic data pretrain")
             model = MODEL_CLASS(PRETRAIN_NUM_OUT_CHANNELS)
-            model.load_state_dict(torch.load(os.path.join(SAVED_MODEL_DIR, SYNTH_PRETRAIN_NAME + ".pt")))
+            model.load_state_dict(
+                torch.load(os.path.join(SAVED_MODEL_DIR, SYNTH_PRETRAIN_NAME + ".pt"), map_location=DEVICE)
+            )
             model.new_head(SEG_NUM_OUT_CHANNELS)
             model = model.to(DEVICE)
             optim = Adam(model.parameters(), lr=LR)
@@ -233,9 +249,17 @@ if __name__ == "__main__":
             test_IOUs["synth_pretrain"].append(test_score)
             print(f"Test IOU: {test_score:.4g}")
 
-            segmentation_image_output(model, test_dl, os.path.join(EXAMPLE_IMAGES_DIR, SYNTH_SEG_NAME + f"_size_{len(train_ds)}_run_{run}" +".jpg"), DEVICE)
+            segmentation_image_output(
+                model,
+                test_dl,
+                os.path.join(EXAMPLE_IMAGES_DIR, SYNTH_SEG_NAME + f"_size_{len(train_ds)}_run_{run}" + ".jpg"),
+                DEVICE,
+            )
 
             model = model.to(dtype=torch.float32)
-            torch.save(model.state_dict(), os.path.join(SAVED_MODEL_DIR, SYNTH_SEG_NAME + f"_size_{len(train_ds)}_run_{run}" +".pt"))
+            torch.save(
+                model.state_dict(),
+                os.path.join(SAVED_MODEL_DIR, SYNTH_SEG_NAME + f"_size_{len(train_ds)}_run_{run}" + ".pt"),
+            )
 
             print("Done\n")
