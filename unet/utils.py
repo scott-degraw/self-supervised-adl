@@ -228,7 +228,7 @@ class OxfordPetsDataset(Dataset):
         self.split = split
         image_means = torch.tensor((0.4778641164302826, 0.443441778421402, 0.3939882814884186))
         image_stds = torch.tensor((0.2677248418331146, 0.26299381256103516, 0.269730806350708))
-        image_transform = transforms.Compose(
+        self.image_transform = transforms.Compose(
             [
                 transforms.ToTensor(),
                 transforms.Resize(size=image_size, interpolation=transforms.InterpolationMode.NEAREST),
@@ -243,7 +243,7 @@ class OxfordPetsDataset(Dataset):
             ]
         )
 
-        trimap_transform = transforms.Compose(
+        self.trimap_transform = transforms.Compose(
             [
                 transforms.PILToTensor(),
                 Trimap2Class(),
@@ -265,8 +265,8 @@ class OxfordPetsDataset(Dataset):
             split=dataset_split,
             target_types="segmentation",
             download=True,
-            transform=image_transform,
-            target_transform=trimap_transform,
+            transform=self.image_transform,
+            target_transform=self.trimap_transform,
         )
 
     def __len__(self) -> int:
