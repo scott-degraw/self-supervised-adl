@@ -1,3 +1,7 @@
+""" 
+Pretrain models on Kaggle Dogs vs. Cats dataset and stable diffusion synthetic dataset.
+"""
+
 import torch
 import torch.nn as nn
 from torch.utils.data import random_split
@@ -8,22 +12,19 @@ from torch.cuda.amp import autocast
 from utils import *
 from run_config import *
 
-"""
-Training/Testing Loops
-"""
 
 def epoch_step(
     train_dl: torch.utils.data.DataLoader, model: nn.Module, criterion: nn.Module, optimizer: torch.optim.Optimizer
 ) -> float:
     """
-    Do one epoch training Step
+    Do one epoch training step for inpainting pretraining.
     Inputs:
-        - train_dl (data.DataLoader): training dataloader
-        - model (nn.Module): model to train
-        - criterion (nn.Module): loss function
-        - optimizer (optim.Optimizer): optimizer
+        train_dl (data.DataLoader): Training dataloader.
+        model (nn.Module): Model to train.
+        criterion (nn.Module): Loss function.
+        optimizer (torch.optim.Optimizer): Optimizer.
     Returns:
-        - total_loss: total loss for the epoch
+        total_loss (float): Mean loss for the epoch.
     """
     total_loss = 0.0
     model.train()
@@ -33,6 +34,7 @@ def epoch_step(
 
         # Forward pass
         optimizer.zero_grad()
+        # Use half precision for training
         with autocast():
             loss = criterion(model=model, images=images, masks=masks)
             total_loss += images.shape[0] * loss.item()
@@ -49,11 +51,11 @@ def test_step(test_dl: torch.utils.data.DataLoader, model: nn.Module, criterion:
     """
     Test using the validation/test set
     Inputs:
-        - test_dl (data.DataLoader): test dataloader
-        - model (nn.Module): model to test
-        - criterion (nn.Module): loss function
+        test_dl (data.DataLoader): Test dataloader.
+        model (nn.Module): Model to test.
+        criterion (nn.Module): Loss function.
     Returns:
-        Loss for the test set
+        Loss for the test set.
     """
     total_loss = 0.0
     model.eval()
@@ -79,6 +81,19 @@ def train_loop(
     max_num_epochs: int = 10,
     patience: int = 5,
 ):
+    """
+    Training loop for pretraining. Trains the inputted model.
+
+    Args:
+        train_dl (DataLoader): Training dataloader.
+        val_dl (DataLoader): Validation dataloader.
+        model (nn.Module): Inpainting model to train.
+        criterion (nn.Module): Loss function.
+        optim (torch.optim.Optimizer): Optimiser.
+        max_num_epochs (int, optional): Maximum number of epochs to train for. Defaults to 10.
+        patience (int, optional): Patience for early stopping. Defaults to 5.
+    """
+
     val_losses = []
     best_val_loss = torch.inf
     no_improvement_counter = 0
@@ -111,9 +126,10 @@ def train_loop(
     best_val_loss = val_losses[best_epoch]
     model.load_state_dict(model_state_dicts[best_epoch])
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     torch.manual_seed(7843718)
-    
+
     ### Pretraining ###
     print("#" * 10 + " Pretraining " + "#" * 10 + "\n")
 
@@ -125,8 +141,9 @@ if __name__=="__main__":
 
     synth_ds = SynthDataset(ROOT_DIR, image_size=IMAGE_SIZE)
 
+    # Wrap dataset to get mask 
     pretrain_ds = PretrainingDataset(synth_ds, mask_generator=MASK_GENERATOR)
-    
+
     train_ds, val_ds, test_ds = random_split(pretrain_ds, [SPLIT * SPLIT, SPLIT * (1 - SPLIT), 1 - SPLIT])
     print(f"Number of training examples: {len(train_ds)}")
 
@@ -149,6 +166,7 @@ if __name__=="__main__":
 
     print("Done\n")
 
+    # Example image outputs
     pretrain_image_output(model, test_dl, os.path.join(EXAMPLE_IMAGES_DIR, SYNTH_PRETRAIN_NAME + ".jpg"), DEVICE)
 
     model = model.to(dtype=torch.float32)

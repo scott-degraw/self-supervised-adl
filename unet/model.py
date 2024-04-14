@@ -86,6 +86,12 @@ class UNet(nn.Module):
         self.new_head(num_out_channels=self.num_out_channels)
 
     def new_head(self, num_out_channels: int = 3):
+        """
+        Create new last layer classifier head
+
+        Args:
+            num_out_channels (int, optional): Number of output channels for last layer. Defaults to 3.
+        """
         self.num_out_channels = num_out_channels
         # 1x1 convolution classifier
         self.classifier = nn.Conv2d(64, num_out_channels, kernel_size=1, padding=0)

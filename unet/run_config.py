@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 
+from torch.cuda.amp import GradScaler
+
 from utils import *
 from model import UNet
 
@@ -32,7 +34,7 @@ EVAL_BATCH_SIZE = 64
 PRETRAIN_MAX_NUM_EPOCHS = 20
 TRAIN_MAX_NUM_EPOCHS = 20
 PATIENCE = 5
-NUM_WORKERS = 8
+NUM_WORKERS = 0
 
 MODEL_CLASS = UNet
 

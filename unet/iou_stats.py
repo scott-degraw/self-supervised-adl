@@ -1,3 +1,8 @@
+""" 
+Script to generate test intersection over union test dataset statistics for each run and
+training size sample. Saves to csv file in SAVED_MODEL_DIR/TEST_IOUS_FNAME.
+"""
+
 from glob import glob
 from os import path
 import csv
@@ -6,11 +11,9 @@ import re
 import torch
 
 from utils import *
-from model import UNet
 from run_config import *
 
 TEST_IOUS_FNAME = "test_ious.csv"
-EVAL_BATCH_SIZE = 256
 
 if __name__ == "__main__":
     test_ds = OxfordPetsDataset(root=ROOT_DIR, split="test", image_size=IMAGE_SIZE)
@@ -30,17 +33,18 @@ if __name__ == "__main__":
         writer.writeheader()
         for model_name, model_fnames in zip(model_types, model_type_fnames):
             for model_fname in model_fnames:
-                # Use regex on filename to find the train size
-                # and run number
+                # Use regex on filename to find the train size and run number
                 regex = model_name + r"_size_(\d+)_run_(\d).pt"
                 match = re.search(regex, model_fname)
                 train_size = match.group(1)
                 run = match.group(2)
+
                 model = MODEL_CLASS(num_out_channels=1)
                 model_path = path.join(SAVED_MODEL_DIR, model_fname)
                 model.load_state_dict(torch.load(model_path, map_location=DEVICE))
                 model = model.to(DEVICE)
-                test_iou = model_iou(model, test_dl, DEVICE).item()
+                
+                test_iou = model_iou(model, test_dl, DEVICE)
                 print(f"{model_name}, train_size: {train_size}, run: {run}, test IOU: {test_iou:.4g}")
 
                 writer.writerow(

@@ -1,6 +1,8 @@
-from os.path import join
-import csv
+""" 
+Semantic segmentation training and results.
+"""
 
+from os.path import join
 
 import torch
 import torch.nn as nn
@@ -13,23 +15,20 @@ from torch.utils.data import random_split
 from utils import *
 from run_config import *
 
-"""
-Training/Testing Loops
-"""
-
 
 def epoch_step(
     train_dl: torch.utils.data.DataLoader, model: nn.Module, criterion: nn.Module, optimizer: torch.optim.Optimizer
 ) -> float:
     """
-    Do one epoch training Step
+    Do one epoch training for semantic segmentation.
+
     Inputs:
-        - train_dl (data.DataLoader): training dataloader
-        - model (nn.Module): model to train
-        - criterion (nn.Module): loss function
-        - optimizer (optim.Optimizer): optimizer
+        train_dl (data.DataLoader): Training dataloader.
+        model (nn.Module): Model to train.
+        criterion (nn.Module): Loss function.
+        optimizer (torch.optim.Optimizer): Optimizer.
     Returns:
-        - total_loss: total loss for the epoch
+        total_loss (float): Mean loss for the epoch.
     """
     total_loss = 0.0
     model.train()
@@ -39,6 +38,7 @@ def epoch_step(
 
         # Forward pass
         optimizer.zero_grad()
+        # Use half precision for training.
         with autocast():
             outputs = model(inputs)
             loss = criterion(outputs, targets)
@@ -51,33 +51,6 @@ def epoch_step(
 
     return total_loss / len(train_dl.dataset)
 
-
-def test_step(test_dl: torch.utils.data.DataLoader, model: nn.Module, criterion: nn.Module) -> float:
-    """
-    Test using the validation/test set
-    Inputs:
-        - test_dl (data.DataLoader): test dataloader
-        - model (nn.Module): model to test
-        - criterion (nn.Module): loss function
-    Returns:
-        Loss for the test set
-    """
-    total_loss = 0.0
-    model.eval()
-    with torch.no_grad():
-        for inputs, targets in test_dl:
-            inputs = inputs.to(DEVICE)
-            targets = targets.to(DEVICE)
-
-            # Forward pass
-            with autocast():
-                outputs = model(inputs)
-                loss = criterion(outputs, targets)
-                total_loss += targets.shape[0] * loss.item()
-
-    return total_loss / len(test_dl.dataset)
-
-
 def train_loop(
     train_dl: DataLoader,
     val_dl: DataLoader,
@@ -85,13 +58,21 @@ def train_loop(
     criterion: nn.Module,
     optim: torch.optim.Optimizer,
     max_num_epochs: int = 10,
-    patience: int = 5,
 ):
-    val_scores = []
-    best_val_score = -torch.inf
-    no_improvement_counter = 0
+    """
+    Training loop for semantic segmentation. Trains the inputted model.
 
-    model_state_dicts = []
+    Args:
+        train_dl (DataLoader): Training dataloader.
+        val_dl (DataLoader): Validation dataloader.
+        model (nn.Module): Segmentation model to train.
+        criterion (nn.Module): Loss function.
+        optim (torch.optim.Optimizer): Optimiser.
+        max_num_epochs (int, optional): Maximum number of epochs to train for. Defaults to 10.
+    """
+    val_scores = [] # Validation scores for each epoch
+
+    model_state_dicts = [] # Saved model state_dicts for each epoch
 
     for epoch in range(max_num_epochs):
         # Train
@@ -100,25 +81,14 @@ def train_loop(
         val_score = model_iou(model, val_dl, DEVICE)
         print(f"Epoch {epoch + 1} Loss: {epoch_loss:.4g} Val IOU: {val_score:.4g}")
 
-        # Early stopping
         val_scores.append(val_score)
 
         cpu_state_dict = {key: tensor.cpu() for key, tensor in model.state_dict().items()}
         model_state_dicts.append(cpu_state_dict)
 
-        if val_score > best_val_score:
-            no_improvement_counter = 0
-            best_val_score = val_score
-        else:
-            no_improvement_counter += 1
-
-        if no_improvement_counter == patience:
-            break
-
+    # Choose the best epoch and load that into the model.
     best_epoch = torch.tensor(val_scores).argmax()
-    best_val_score = val_scores[best_epoch]
     model.load_state_dict(model_state_dicts[best_epoch])
-
 
 if __name__ == "__main__":
     torch.manual_seed(1537890)
@@ -128,9 +98,12 @@ if __name__ == "__main__":
     full_train_val_ds = OxfordPetsDataset(ROOT_DIR, split="train", image_size=IMAGE_SIZE)
     test_ds = OxfordPetsDataset(ROOT_DIR, split="test", image_size=IMAGE_SIZE)
 
+    # Split the training set into random subsets.
     train_sample_splits = [1.0, 0.75, 0.5, 0.25, 0.1, 0.05]
 
+    # Perform 5 runs
     n_runs = 5
+
     for run in range(n_runs):
         print(f"##### run {run + 1} #####")
         for train_split in train_sample_splits:
@@ -146,6 +119,7 @@ if __name__ == "__main__":
             val_dl = DataLoader(val_ds, batch_size=EVAL_BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS)
             test_dl = DataLoader(test_ds, batch_size=EVAL_BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS)
 
+            # Use binary cross entropy loss
             criterion = nn.BCEWithLogitsLoss()
 
             ## No pretraining ##
@@ -166,7 +140,6 @@ if __name__ == "__main__":
             )
 
             test_score = model_iou(model, test_dl, DEVICE)
-            test_IOUs["no_pretrain"].append(test_score)
             print(f"Test IOU: {test_score:.4g}")
 
             segmentation_image_output(
@@ -206,7 +179,6 @@ if __name__ == "__main__":
             )
 
             test_score = model_iou(model, test_dl, DEVICE)
-            test_IOUs["kaggle_pretrain"].append(test_score)
             print(f"Test IOU: {test_score:.4g}")
 
             segmentation_image_output(
@@ -246,7 +218,6 @@ if __name__ == "__main__":
             )
 
             test_score = model_iou(model, test_dl, DEVICE)
-            test_IOUs["synth_pretrain"].append(test_score)
             print(f"Test IOU: {test_score:.4g}")
 
             segmentation_image_output(
