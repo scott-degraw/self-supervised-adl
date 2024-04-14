@@ -1,3 +1,7 @@
+""" 
+Contains configuration parameters used for pretraining and segmentation scripts.
+"""
+
 import torch
 import torch.nn as nn
 
@@ -30,7 +34,7 @@ class DummyModel(nn.Module):
         return self.head(images)
 
 BATCH_SIZE = 32
-EVAL_BATCH_SIZE = 64
+EVAL_BATCH_SIZE = 64 # Larger batch size for evaluating model
 PRETRAIN_MAX_NUM_EPOCHS = 20
 TRAIN_MAX_NUM_EPOCHS = 20
 PATIENCE = 5
@@ -52,7 +56,7 @@ SQUARE_SIZE = 16
 IMAGE_SIZE = (240, 240)
 MASK_GENERATOR = CheckerboardMask(square_size=SQUARE_SIZE, image_size=IMAGE_SIZE)
 
-LR = 1e-3
+LR = 1e-3 # Learning rate
 
 ROOT_DIR = "../data"
 SAVED_MODEL_DIR = "../saved_models"

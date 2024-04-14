@@ -1,10 +1,6 @@
 """
-Extends torch Dataset class to interface with the following datasets:
-- Oxford Pets
-- Stanford Dogs (TBD)
-- Microsoft Dogs vs. Cats (TBD)
-- Cat Head Detection (TBD)
-
+Classes and functions used in training. Includes dataset classes, class for generating masks,
+testing model, and visualizing model output.
 """
 
 import os

@@ -136,7 +136,6 @@ if __name__ == "__main__":
                 criterion=criterion,
                 optim=optim,
                 max_num_epochs=TRAIN_MAX_NUM_EPOCHS,
-                patience=PATIENCE,
             )
 
             test_score = model_iou(model, test_dl, DEVICE)
@@ -175,7 +174,6 @@ if __name__ == "__main__":
                 criterion=criterion,
                 optim=optim,
                 max_num_epochs=TRAIN_MAX_NUM_EPOCHS,
-                patience=PATIENCE,
             )
 
             test_score = model_iou(model, test_dl, DEVICE)
@@ -214,7 +212,6 @@ if __name__ == "__main__":
                 criterion=criterion,
                 optim=optim,
                 max_num_epochs=TRAIN_MAX_NUM_EPOCHS,
-                patience=PATIENCE,
             )
 
             test_score = model_iou(model, test_dl, DEVICE)
